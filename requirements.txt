@@ -1,0 +1,11 @@
+# Radar VR - dependencias
+# Python 3.11
+
+requests>=2.31.0
+kokoro-onnx>=0.4.9
+soundfile>=0.12.1
+
+# Instalados separadamente por setup.ps1:
+#   Ollama      https://ollama.com/download
+#   espeak-ng   phonemizer PT-BR do Kokoro
+#   n8n         npm install -g n8n

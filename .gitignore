@@ -1,0 +1,28 @@
+# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+
+# Modelos de IA (338 MB) - baixados por setup.ps1
+modelos/
+
+# Saidas geradas a cada execucao.
+# Um audio e uma pagina de exemplo ficam versionados como amostra; ver
+# a excecao no fim deste arquivo.
+audio/*.wav
+audio/ultimo_boletim.txt
+data/boletim_*.html
+data/boletim_atual.html
+data/jornal_vr.csv
+data/jornal_vr.db
+logs/*.log
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Amostra da entrega: mantida no repositorio para que o projeto possa ser
+# avaliado sem precisar executar o pipeline.
+!evidencias/
+!evidencias/*

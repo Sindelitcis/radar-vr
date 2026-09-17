@@ -1,0 +1,14 @@
+{
+  "coletado_em": "17/09/2026 02:56",
+  "fonte": "Steam Web API (store.steampowered.com) - acesso publico sem chave",
+  "total_jogos_vr": 5693,
+  "jogos_vr_em_promocao": 770,
+  "percentual_em_promocao": 13.5,
+  "amostra_analisada": 25,
+  "preco_medio_promocao_brl": 39.26,
+  "preco_mediano_promocao_brl": 39.58,
+  "preco_min_brl": 5.59,
+  "preco_max_brl": 86.39,
+  "desconto_medio_pct": 53.2,
+  "titulos_gratuitos_na_amostra": 0
+}

@@ -1,0 +1,136 @@
+"""Redacao das chamadas do boletim com LLM local (Ollama).
+
+O modelo escreve apenas onde ha texto livre a resumir: o corpo de um anuncio
+do desenvolvedor. Eventos numericos - preco, desconto, variacao - ja chegam
+como frase completa de `noticias.py` e nao passam pelo modelo.
+
+A separacao e necessaria por precisao. Mesmo instruido a preservar o tempo
+verbal, o modelo reescreve "esta em promocao" como "entrou em promocao",
+afirmando uma mudanca que nao foi observada. Numero e verbo de mudanca sao
+apuracao, nao redacao.
+"""
+import json
+import logging
+import re
+
+import requests
+
+import config
+
+log = logging.getLogger("redacao")
+
+TIPOS_REDIGIDOS = {"PATCH_GRANDE"}
+
+SISTEMA = (
+    "Voce e redator de um boletim diario de audio sobre jogos de realidade "
+    "virtual na Steam, em portugues do Brasil. Escreve para ser OUVIDO: "
+    "frases curtas, diretas, sem adjetivo de propaganda. "
+    "Todos os numeros ja vem prontos no material recebido; voce nunca inventa, "
+    "estima ou altera um numero."
+)
+
+GABARITO = """Escreva UMA frase de noticia de radio sobre o fato abaixo.
+Responda APENAS com JSON valido:
+
+{{"linha": "a frase, no maximo 28 palavras"}}
+
+Regras:
+- Comece pelo nome do jogo.
+- Escreva com acentuacao correta do portugues. O texto sera lido em voz alta.
+- Nao escreva numero de versao nem data por extenso.
+- Nao opine sobre valer a pena. Voce informa, nao recomenda.
+- Resuma O QUE MUDOU no jogo, ignorando saudacao, agradecimento e pedido de
+  wishlist.
+
+JOGO: {nome}
+FATO: {resumo}
+{extra}"""
+
+
+def _chamar(prompt):
+    resposta = requests.post(
+        f"{config.OLLAMA_URL}/api/generate",
+        json={
+            "model": config.OLLAMA_MODELO,
+            "prompt": prompt,
+            "system": SISTEMA,
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": config.OLLAMA_TEMP},
+        },
+        timeout=config.OLLAMA_TIMEOUT,
+    )
+    resposta.raise_for_status()
+    return resposta.json().get("response", "")
+
+
+def _extrair_json(texto):
+    try:
+        return json.loads(texto)
+    except json.JSONDecodeError:
+        pass
+    achado = re.search(r"\{.*\}", texto, re.DOTALL)
+    if achado:
+        try:
+            return json.loads(achado.group(0))
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
+def verificar_servico():
+    """Lista os modelos disponiveis, ou None se o Ollama nao responder."""
+    try:
+        resposta = requests.get(f"{config.OLLAMA_URL}/api/tags", timeout=5)
+        resposta.raise_for_status()
+        modelos = [m["name"] for m in resposta.json().get("models", [])]
+        log.info("Ollama ativo: %s", ", ".join(modelos) or "nenhum modelo")
+        return modelos
+    except Exception as erro:
+        log.error("Ollama indisponível em %s (%s)", config.OLLAMA_URL, erro)
+        return None
+
+
+def _redigir_um(evento):
+    dados = evento.get("dados", {})
+    prompt = GABARITO.format(
+        nome=evento["nome"],
+        resumo=evento["resumo"],
+        extra=f"TEXTO DO ANUNCIO: {dados['texto'][:400]}" if dados.get("texto") else "",
+    )
+    parecer = _extrair_json(_chamar(prompt)) or {}
+    return parecer.get("linha", "").strip()
+
+
+def redigir(eventos):
+    """Preenche `linha` em cada evento do boletim."""
+    log.info("=== ETAPA 3/4 | Redação com LLM local (%s) ===", config.OLLAMA_MODELO)
+
+    precisam_llm = [e for e in eventos if e["tipo"] in TIPOS_REDIGIDOS]
+    if precisam_llm and verificar_servico() is None:
+        raise RuntimeError(
+            f"Ollama não respondeu. Execute 'ollama serve' e "
+            f"'ollama pull {config.OLLAMA_MODELO}'."
+        )
+
+    for evento in eventos:
+        if evento["tipo"] not in TIPOS_REDIGIDOS:
+            evento["linha"] = f"{evento['nome']} {evento['resumo']}"
+            origem = "regra"
+        else:
+            try:
+                evento["linha"] = _redigir_um(evento) or (
+                    f"{evento['nome']} {evento['resumo']}"
+                )
+                origem = "llm"
+            except Exception as erro:
+                log.error("Redação falhou em %s: %s", evento["nome"], erro)
+                evento["linha"] = f"{evento['nome']} {evento['resumo']}"
+                origem = "regra"
+        log.info("  %-18s [%s] %s", evento["tipo"][:18], origem, evento["linha"][:52])
+
+    log.info(
+        "Etapa 3 concluída: %d linhas (%d do LLM, %d por regra)",
+        len(eventos), len(precisam_llm), len(eventos) - len(precisam_llm),
+    )
+    return eventos

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Radar VR — 17/09/2026</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 20px 16px 40px;
+  font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #f7f7f5; color: #1a1a1a;
+}
+.folha { max-width: 1080px; margin: 0 auto; }
+header {
+  border-bottom: 3px solid #1a1a1a; padding-bottom: 10px; margin-bottom: 16px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+}
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.5px; }
+.data { color: #666; font-size: 13px; }
+.aviso {
+  background: #fff8e1; border-left: 4px solid #f59e0b;
+  padding: 10px 14px; margin: 0 0 16px; font-size: 13.5px; border-radius: 0 6px 6px 0;
+}
+.grade {
+  display: grid; gap: 12px; align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+}
+.grade > h2, .grade > .manchete, .grade > .bloco { grid-column: 1 / -1; }
+h2 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+  color: #666; margin: 14px 0 0; font-weight: 600;
+}
+.manchete { background: #1a1a1a; color: #fff; padding: 18px 20px; border-radius: 10px; }
+.manchete .etiqueta { background: rgba(255,255,255,.18); }
+.manchete h3 { font-size: 19px; }
+.manchete a { color: #fff; }
+.manchete .dados { color: #b8b8b8; }
+.item {
+  background: #fff; border: 1px solid #e5e5e2; border-radius: 10px;
+  padding: 14px 16px; height: 100%;
+}
+.etiqueta {
+  display: inline-block; font-size: 10.5px; font-weight: 600; color: #fff;
+  padding: 2px 8px; border-radius: 20px; text-transform: uppercase;
+  letter-spacing: .6px; margin-bottom: 7px;
+}
+h3 { font-size: 16px; margin: 0 0 5px; line-height: 1.3; }
+h3 a { color: inherit; text-decoration: none; border-bottom: 2px solid #d4d4d0; }
+h3 a:hover { border-color: currentColor; }
+.linha { margin: 0 0 9px; font-size: 14px; }
+.dados { font-size: 12.5px; color: #666; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.dados b { color: #1a1a1a; font-weight: 600; }
+.preco { display: inline-flex; align-items: center; gap: 7px; }
+.corte { background: #059669; color: #fff; font-weight: 600; padding: 1px 6px; border-radius: 3px; }
+.cheio { text-decoration: line-through; opacity: .55; }
+.final { font-weight: 600; color: #1a1a1a; }
+.bloco { background: #fff; border: 1px solid #e5e5e2; border-radius: 10px; padding: 14px 16px; }
+.bloco > .titulo { font-size: 14px; margin: 0 0 10px; }
+.bloco.manchete { background: #1a1a1a; color: #fff; border: none; padding: 18px 20px; }
+.bloco.manchete > .titulo { font-size: 17px; }
+.bloco.manchete .jogo { background: rgba(255,255,255,.08); }
+.bloco.manchete .jogo a { color: #fff; }
+.bloco.manchete .cheio { color: #b8b8b8; }
+.bloco.manchete .final { color: #fff; }
+.lista { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.lista .jogo {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; padding: 7px 10px; background: #f7f7f5; border-radius: 6px; font-size: 13.5px;
+}
+.lista .jogo a { color: inherit; text-decoration: none; font-weight: 500; }
+.lista .jogo a:hover { text-decoration: underline; }
+footer {
+  margin-top: 28px; padding-top: 14px; border-top: 1px solid #ddd;
+  font-size: 12.5px; color: #777; line-height: 1.6;
+}
+footer a { color: inherit; }
+footer strong { color: #1a1a1a; font-weight: 600; }
+footer .meta { display: inline-block; margin-top: 6px; font-size: 11.5px; opacity: .75; }
+@media (prefers-color-scheme: dark) {
+  body { background: #17171a; color: #e8e8e6; }
+  header { border-bottom-color: #e8e8e6; }
+  .item, .bloco { background: #202024; border-color: #303036; }
+  .manchete { background: #2563eb; }
+  h2, .data, .dados, footer { color: #9a9aa0; }
+  .dados b, .final, footer strong { color: #e8e8e6; }
+  h3 a { border-color: #45454d; }
+  .aviso { background: #2a2418; border-left-color: #f59e0b; }
+  .lista .jogo { background: #17171a; }
+}
+</style></head><body><div class='folha'>
+<header><h1>Radar VR</h1>
+<div class="data">17/09/2026 · 03:13 · 12 títulos monitorados</div></header>
+<div class="aviso"><b>Primeira edição.</b> Esta execução estabelece a linha de base. Variações de preço e de jogadores passam a ser comparadas a partir da próxima edição.</div>
+<div class="grade">
+<div class="bloco manchete">
+  <span class="etiqueta">Acaba em breve</span>
+  <p class="titulo"><b>6 títulos</b> com promoção que termina em 4 dias, dia 21/09</p>
+  <div class="lista"><div class="jogo"><a href="https://store.steampowered.com/app/546560" target="_blank" rel="noopener">Half-Life: Alyx</a><span class="preco"><span class="corte">-75%</span><span class="cheio">R$ 162,00</span><span class="final">R$ 40,50</span></span></div><div class="jogo"><a href="https://store.steampowered.com/app/1104380" target="_blank" rel="noopener">The Room VR: A Dark Matter</a><span class="preco"><span class="corte">-75%</span><span class="cheio">R$ 73,99</span><span class="final">R$ 18,49</span></span></div><div class="jogo"><a href="https://store.steampowered.com/app/2441700" target="_blank" rel="noopener">UNDERDOGS</a><span class="preco"><span class="corte">-33%</span><span class="cheio">R$ 88,99</span><span class="final">R$ 59,62</span></span></div><div class="jogo"><a href="https://store.steampowered.com/app/667970" target="_blank" rel="noopener">VTOL VR</a><span class="preco"><span class="corte">-30%</span><span class="cheio">R$ 55,99</span><span class="final">R$ 39,19</span></span></div><div class="jogo"><a href="https://store.steampowered.com/app/1408230" target="_blank" rel="noopener">Walkabout Mini Golf VR</a><span class="preco"><span class="corte">-30%</span><span class="cheio">R$ 73,99</span><span class="final">R$ 51,79</span></span></div><div class="jogo"><a href="https://store.steampowered.com/app/629730" target="_blank" rel="noopener">Blade and Sorcery</a><span class="preco"><span class="corte">-20%</span><span class="cheio">R$ 99,99</span><span class="final">R$ 79,99</span></span></div></div>
+</div>
+<h2>Destaques do dia</h2>
+<article class="item">
+  <span class="etiqueta" style="background:#2563eb">Atualização</span>
+  <h3><a href="https://store.steampowered.com/app/667970" target="_blank" rel="noopener">VTOL VR</a></h3>
+  <p class="linha">VTOL VR recebeu atualização v1.13.2 com correções de radar, mísseis e redução de latência de voz.</p>
+  <div class="dados"><span class="preco"><span class="corte">-30%</span><span class="cheio">R$ 55,99</span><span class="final">R$ 39,19</span></span></div>
+</article>
+<article class="item">
+  <span class="etiqueta" style="background:#2563eb">Atualização</span>
+  <h3><a href="https://store.steampowered.com/app/2441700" target="_blank" rel="noopener">UNDERDOGS</a></h3>
+  <p class="linha">O Underdogs recebeu atualização para a versão 1.5.4, com melhorias de desempenho e correção de bugs.</p>
+  <div class="dados"><span class="preco"><span class="corte">-33%</span><span class="cheio">R$ 88,99</span><span class="final">R$ 59,62</span></span></div>
+</article>
+<article class="item">
+  <span class="etiqueta" style="background:#2563eb">Atualização</span>
+  <h3><a href="https://store.steampowered.com/app/546560" target="_blank" rel="noopener">Half-Life: Alyx</a></h3>
+  <p class="linha">Half-Life: Alyx recebeu atualização com suporte a jogabilidade standalone e otimizações de desempenho.</p>
+  <div class="dados"><span class="preco"><span class="corte">-75%</span><span class="cheio">R$ 162,00</span><span class="final">R$ 40,50</span></span></div>
+</article>
+<article class="item">
+  <span class="etiqueta" style="background:#2563eb">Atualização</span>
+  <h3><a href="https://store.steampowered.com/app/1408230" target="_blank" rel="noopener">Walkabout Mini Golf VR</a></h3>
+  <p class="linha">Walkabout Mini Golf VR recebeu anuncio do desenvolvedor sobre a colecao Steam Frame Verified Bundle</p>
+  <div class="dados"><span class="preco"><span class="corte">-30%</span><span class="cheio">R$ 73,99</span><span class="final">R$ 51,79</span></span></div>
+</article>
+<h2>Promoções</h2>
+<article class="item">
+  <span class="etiqueta" style="background:#059669">Promoção</span>
+  <h3><a href="https://store.steampowered.com/app/1104380" target="_blank" rel="noopener">The Room VR: A Dark Matter</a></h3>
+  <p class="linha">The Room VR: A Dark Matter está em promoção com 75% de desconto, saindo por R$ 18,49</p>
+  <div class="dados"><span class="preco"><span class="corte">-75%</span><span class="cheio">R$ 73,99</span><span class="final">R$ 18,49</span></span></div>
+</article>
+</div>
+<footer><strong>Seu jornal diário de realidade virtual.</strong> Preços, jogadores ativos, avaliações e anúncios direto da Steam — processado 100% na sua máquina.<br><span class='meta'>12 títulos monitorados · 6 movimentos relevantes nesta edição · <a href="../audio/boletim_2026-09-17_03-13.wav">ouvir a narração</a></span></footer></div></body></html>

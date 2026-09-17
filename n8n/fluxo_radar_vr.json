@@ -1,0 +1,93 @@
+{
+  "id": "radarVRpucpr0001",
+  "name": "Radar VR - Boletim diário",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "aa000000-0000-4000-8000-000000000001",
+      "name": "Executar manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-360, 200]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 9 * * *" }
+          ]
+        }
+      },
+      "id": "aa000000-0000-4000-8000-000000000002",
+      "name": "Agendamento diário 09h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-360, 380]
+    },
+    {
+      "parameters": {
+        "command": "C:\\Users\\Rafael\\Documents\\PUCPR_Faculdade_IA_Generativa\\AI_Factory_2semestre_etapa_1\\executar_jornal.cmd"
+      },
+      "id": "aa000000-0000-4000-8000-000000000003",
+      "name": "Publicar edição",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [-100, 290],
+      "notes": "Executa src/jornal.py: coleta na Steam, detecção de eventos, redação pelo LLM local, síntese de voz e publicação."
+    },
+    {
+      "parameters": {
+        "fileSelector": "C:\\Users\\Rafael\\Documents\\PUCPR_Faculdade_IA_Generativa\\AI_Factory_2semestre_etapa_1\\data\\jornal_vr.csv",
+        "options": {}
+      },
+      "id": "aa000000-0000-4000-8000-000000000004",
+      "name": "Ler planilha publicada",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [160, 290]
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "options": { "delimiter": ";", "encoding": "utf8" }
+      },
+      "id": "aa000000-0000-4000-8000-000000000005",
+      "name": "Converter em itens",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [400, 290]
+    },
+    {
+      "parameters": {
+        "jsCode": "// O CSV acumula todas as edições; aqui ficam apenas as manchetes da\n// execução mais recente.\n//\n// O arquivo é gravado com BOM para que o Excel reconheça a acentuação, o que\n// faz a primeira coluna chegar como \"\\uFEFFpublicada_em\". As chaves são\n// normalizadas antes de qualquer leitura.\nconst limpar = obj => Object.fromEntries(\n  Object.entries(obj).map(([k, v]) => [k.replace(/^\\uFEFF/, '').trim(), v])\n);\n\nconst linhas = $input.all().map(i => limpar(i.json));\nif (!linhas.length) return [];\n\nconst ultima = linhas.map(l => l.publicada_em).sort().pop();\n\nreturn linhas\n  .filter(l => l.publicada_em === ultima)\n  .map(l => ({\n    json: {\n      posicao: Number(l.posicao),\n      secao: l.secao,\n      tipo: l.tipo,\n      titulo: l.nome,\n      chamada: l.linha,\n      preco: l.preco,\n      preco_cheio: l.preco_cheio,\n      desconto: Number(l.desconto || 0),\n      url: l.url\n    }\n  }));"
+      },
+      "id": "aa000000-0000-4000-8000-000000000006",
+      "name": "Manchetes desta edição",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 290]
+    }
+  ],
+  "connections": {
+    "Executar manualmente": {
+      "main": [[{ "node": "Publicar edição", "type": "main", "index": 0 }]]
+    },
+    "Agendamento diário 09h": {
+      "main": [[{ "node": "Publicar edição", "type": "main", "index": 0 }]]
+    },
+    "Publicar edição": {
+      "main": [[{ "node": "Ler planilha publicada", "type": "main", "index": 0 }]]
+    },
+    "Ler planilha publicada": {
+      "main": [[{ "node": "Converter em itens", "type": "main", "index": 0 }]]
+    },
+    "Converter em itens": {
+      "main": [[{ "node": "Manchetes desta edição", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "instanceId": "radar-vr-pucpr-etapa1" },
+  "tags": []
+}
