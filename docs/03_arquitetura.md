@@ -1,6 +1,7 @@
 # Arquitetura
 
-**Radar VR** · AI Factory — Etapa 1 · PUCPR
+**Projeto:** Radar VR
+**Disciplina:** AI Factory, Etapa 1 (PUCPR)
 
 ---
 
@@ -47,7 +48,7 @@ Nenhuma exige chave de autenticação.
 appid: `discount_expiration` existe apenas em `/api/featuredcategories`,
 restrito a dez títulos em destaque. A alternativa é o contador na página da
 loja, o que implica leitura de HTML. `coleta.buscar_fim_promocao()` isola essa
-dependência e falha em silêncio — sem a data, o boletim não anuncia o prazo e
+dependência e falha em silêncio. Sem a data, o boletim não anuncia o prazo e
 nenhuma outra etapa é afetada.
 
 ## 4. Watchlist
@@ -64,6 +65,7 @@ execução seguinte para que a comparação tenha significado.
 | `PRECO_MINIMO` | 85 | preço abaixo do menor já registrado |
 | `PATCH_GRANDE` | 70 | anúncio do desenvolvedor nos últimos 7 dias, ainda não publicado |
 | `PROMOCAO_NOVA` | 55 | desconto onde antes não havia |
+| `PROMOCAO_ENCERRADA` | 50 | desconto que voltou a zero desde a edição anterior |
 | `PICO_JOGADORES` | 45 | alta ≥ 25 % sobre base ≥ 80 jogadores |
 | `QUEDA_JOGADORES` | 35 | queda ≥ 35 % sobre base ≥ 80 jogadores |
 | `ONDA_AVALIACOES` | 30 | ≥ 40 avaliações novas desde a edição anterior |
@@ -85,17 +87,18 @@ boletim inteiro.
 
 ### Agrupamento
 
-Liquidações sazonais dão a mesma data de término a todo o catálogo. Três ou
-mais promoções terminando na mesma data são reunidas em um único evento, que
-mantém os individuais em `dados.membros`: o áudio usa a chamada resumida, a
-página expande a lista completa.
+Liquidações sazonais movem o catálogo inteiro de uma vez: todos os títulos
+passam a ter a mesma data de término, e depois saem de promoção no mesmo dia.
+Três ou mais promoções que compartilham o mesmo fato são reunidas em um único
+evento, que mantém os individuais em `dados.membros`. O áudio usa a chamada
+resumida e a página expande a lista completa.
 
 ## 6. Divisão entre LLM e regra
 
 | Conteúdo | Origem | Motivo |
 |---|---|---|
 | Resumo de anúncio do desenvolvedor | LLM | texto livre; extrair o que mudou de um changelog é onde o modelo agrega valor |
-| Frases com número — preço, desconto, variação | Regra determinística | afirmação verificável precisa ser auditável e consistente entre execuções |
+| Frases com número (preço, desconto, variação) | Regra determinística | afirmação verificável precisa ser auditável e consistente entre execuções |
 
 A separação é necessária por precisão: mesmo instruído a preservar o tempo
 verbal, o modelo reescreve "está em promoção" como "entrou em promoção",
@@ -117,7 +120,7 @@ tamanho máximo ≈ títulos monitorados × anúncios na janela ≈ 75 linhas
 ```
 
 A tabela `snapshots` cresce, e deve: é a série temporal. O crescimento é
-linear — 15 linhas por edição, abaixo de 1 MB por ano.
+linear, com 15 linhas por edição e menos de 1 MB por ano.
 
 ## 8. Camada de pronúncia
 
@@ -133,9 +136,9 @@ da síntese:
 | `14/09/2026` | removido; a data vira "ontem", "anteontem" |
 | `VR` | vê érre |
 
-Todas as regras operam sobre a **forma** do texto — número, data, versão,
-sigla — e não sobre lista de conteúdos conhecidos. Valem para qualquer entrada
-sem manutenção.
+Todas as regras operam sobre a **forma** do texto, ou seja, se é número, data,
+versão ou sigla, e não sobre uma lista de conteúdos conhecidos. Por isso valem
+pra qualquer entrada, sem precisar de manutenção.
 
 Siglas de duas a três letras são soletradas. O limite de três preserva títulos
 em caixa alta como `DOOM` ou `RAGE`, lidos como palavra.
