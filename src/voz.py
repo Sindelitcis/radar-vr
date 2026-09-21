@@ -83,6 +83,8 @@ SEM_NOVIDADE = [
 
 ORDEM_SECOES = ["destaques", "promocoes", "radar"]
 
+TIPOS_COM_OFERTA_ATIVA = {"PROMOCAO_NOVA", "PROMOCAO_ACABANDO", "PRECO_MINIMO"}
+
 
 def _periodo(hora):
     if hora < 6:
@@ -146,9 +148,12 @@ def montar_roteiro(eventos, titulos_observados, primeira_edicao):
             "jogadores com hoje."
         )
 
-    tem_promocao = any(e["secao"] == "promocoes" for e in eventos)
+    # A despedida que manda correr atrás da oferta só cabe quando existe
+    # oferta em curso. O teste é por tipo, não por seção: promoção encerrada
+    # também vive em "promoções", e convidar a aproveitá-la seria contraditório.
+    tem_oferta = any(e["tipo"] in TIPOS_COM_OFERTA_ATIVA for e in eventos)
     partes.append(
-        random.choice(DESPEDIDAS_COM_PROMOCAO if tem_promocao else DESPEDIDAS)
+        random.choice(DESPEDIDAS_COM_PROMOCAO if tem_oferta else DESPEDIDAS)
     )
     return pronuncia.preparar_para_fala(" ".join(partes))
 

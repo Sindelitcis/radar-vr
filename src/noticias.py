@@ -21,6 +21,7 @@ PESOS = {
     "PRECO_MINIMO": 85,
     "PATCH_GRANDE": 70,
     "PROMOCAO_NOVA": 55,
+    "PROMOCAO_ENCERRADA": 50,
     "PICO_JOGADORES": 45,
     "QUEDA_JOGADORES": 35,
     "ONDA_AVALIACOES": 30,
@@ -30,14 +31,22 @@ SECOES = {
     "PROMOCAO_ACABANDO": "promocoes",
     "PRECO_MINIMO": "promocoes",
     "PROMOCAO_NOVA": "promocoes",
+    "PROMOCAO_ENCERRADA": "promocoes",
     "PATCH_GRANDE": "destaques",
     "PICO_JOGADORES": "destaques",
     "QUEDA_JOGADORES": "radar",
     "ONDA_AVALIACOES": "radar",
 }
 
+# Tipos cujo fato e compartilhado por varios titulos e portanto agrupavel.
+TIPOS_AGRUPAVEIS = ("PROMOCAO_ACABANDO", "PROMOCAO_ENCERRADA")
+
 MAX_EVENTOS_POR_JOGO = 2
 MIN_PARA_AGRUPAR = 3
+
+
+def _reais(valor):
+    return f"R$ {valor:.2f}".replace(".", ",")
 
 
 def _evento(tipo, jogo, resumo, score, dados=None):
@@ -79,6 +88,21 @@ def _eventos_de_preco(conexao, jogo, antes):
             f"entrou em promoção com {desconto}% de desconto, saindo por {jogo['preco']}",
             PESOS["PROMOCAO_NOVA"] + desconto / 2,
             {"desconto": desconto},
+        ))
+    elif not desconto and (antes.get("desconto") or 0):
+        # A janela fechou: o preco voltou ao cheio. E o unico evento que
+        # reporta perda de oportunidade, e por isso o peso cresce com o
+        # tamanho do desconto que deixou de existir.
+        antigo = antes.get("preco_num")
+        volta = f", ante {_reais(antigo)}" if antigo else ""
+        eventos.append(_evento(
+            "PROMOCAO_ENCERRADA", jogo,
+            f"saiu de promoção e voltou a {jogo['preco']}{volta}",
+            PESOS["PROMOCAO_ENCERRADA"] + (antes.get("desconto") or 0) / 4,
+            {
+                "desconto_anterior": antes.get("desconto") or 0,
+                "preco_anterior": _reais(antigo) if antigo else "",
+            },
         ))
 
     fim = jogo.get("fim_promocao")
@@ -197,40 +221,63 @@ def _eventos_de_avaliacoes(jogo, antes):
     )]
 
 
-def _agrupar_fim_de_promocao(eventos):
-    """Reune num unico evento as promocoes que terminam na mesma data.
+def _agrupar_promocoes(eventos):
+    """Reune num unico evento as promocoes que compartilham o mesmo fato.
 
-    Liquidacoes sazonais dao a mesma data de termino a todo o catalogo, o que
-    produziria varias chamadas com o mesmo conteudo. O evento agrupado mantem
-    os individuais em `dados.membros`: o audio usa apenas a chamada resumida,
-    a pagina expande a lista completa.
+    Liquidacoes sazonais movem o catalogo inteiro de uma vez: todos os titulos
+    passam a ter a mesma data de termino, e depois todos saem de promocao no
+    mesmo dia. Emitir um evento por titulo produziria varias chamadas com o
+    mesmo conteudo.
+
+    O evento agrupado mantem os individuais em `dados.membros`: o audio usa a
+    chamada resumida, a pagina expande a lista completa.
     """
-    por_data, outros = {}, []
-    for evento in eventos:
+    def chave(evento):
+        # promocoes que acabam sao agrupadas pela data; as ja encerradas
+        # compartilham um unico fato - a janela fechou desde a edicao anterior
         if evento["tipo"] == "PROMOCAO_ACABANDO":
-            por_data.setdefault(evento["dados"]["fim"], []).append(evento)
+            return ("PROMOCAO_ACABANDO", evento["dados"]["fim"])
+        return ("PROMOCAO_ENCERRADA", "")
+
+    grupos, outros = {}, []
+    for evento in eventos:
+        if evento["tipo"] in TIPOS_AGRUPAVEIS:
+            grupos.setdefault(chave(evento), []).append(evento)
         else:
             outros.append(evento)
 
     resultado = list(outros)
-    for data_fim, grupo in por_data.items():
+    for (tipo, _), grupo in grupos.items():
         if len(grupo) < MIN_PARA_AGRUPAR:
             resultado += grupo
             continue
 
-        grupo.sort(key=lambda e: e["dados"].get("desconto", 0), reverse=True)
-        faltam = grupo[0]["dados"]["faltam"]
-        quando = {
-            0: "hoje",
-            1: "amanhã",
-        }.get(faltam, f"em {faltam} dias, no dia {grupo[0]['dados']['fim_extenso']}")
-
+        grupo.sort(
+            key=lambda e: e["dados"].get("desconto")
+            or e["dados"].get("desconto_anterior", 0),
+            reverse=True,
+        )
         citados = [e["nome"] for e in grupo[:3]]
         restantes = len(grupo) - 3
         sobra = f", além de outros {restantes}" if restantes > 0 else ""
+        lista = f"{', '.join(citados[:-1])} e {citados[-1]}{sobra}"
+
+        if tipo == "PROMOCAO_ACABANDO":
+            faltam = grupo[0]["dados"]["faltam"]
+            quando = {0: "hoje", 1: "amanhã"}.get(
+                faltam, f"em {faltam} dias, no dia {grupo[0]['dados']['fim_extenso']}"
+            )
+            resumo = f"da lista estão com promoção terminando {quando}: {lista}"
+            extras = {
+                "fim": grupo[0]["dados"]["fim"],
+                "faltam": faltam,
+            }
+        else:
+            resumo = f"da lista saíram de promoção desde a última edição: {lista}"
+            extras = {}
 
         resultado.append({
-            "tipo": "PROMOCAO_ACABANDO",
+            "tipo": tipo,
             "secao": "promocoes",
             "appid": grupo[0]["appid"],
             "nome": f"{len(grupo)} títulos",
@@ -241,17 +288,9 @@ def _agrupar_fim_de_promocao(eventos):
                 "https://store.steampowered.com/search/?category1=998"
                 "&vrsupport=401&specials=1"
             ),
-            "resumo": (
-                f"da lista estão com promoção terminando {quando}: "
-                f"{', '.join(citados[:-1])} e {citados[-1]}{sobra}"
-            ),
+            "resumo": resumo,
             "score": max(e["score"] for e in grupo) + 5,
-            "dados": {
-                "fim": data_fim,
-                "faltam": faltam,
-                "quantidade": len(grupo),
-                "membros": grupo,
-            },
+            "dados": {**extras, "quantidade": len(grupo), "membros": grupo},
         })
     return resultado
 
@@ -272,7 +311,7 @@ def detectar(conexao, catalogo, anterior):
         eventos += _eventos_de_jogadores(jogo, antes)
         eventos += _eventos_de_avaliacoes(jogo, antes)
 
-    eventos = _agrupar_fim_de_promocao(eventos)
+    eventos = _agrupar_promocoes(eventos)
     eventos.sort(key=lambda e: e["score"], reverse=True)
 
     # Teto por titulo, para que um unico jogo nao domine a edicao.

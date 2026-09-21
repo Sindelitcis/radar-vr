@@ -17,6 +17,7 @@ ROTULOS = {
     "PRECO_MINIMO": ("Menor preço", "#7c3aed"),
     "PATCH_GRANDE": ("Atualização", "#2563eb"),
     "PROMOCAO_NOVA": ("Promoção", "#059669"),
+    "PROMOCAO_ENCERRADA": ("Promoção encerrada", "#64748b"),
     "PICO_JOGADORES": ("Em alta", "#ea580c"),
     "QUEDA_JOGADORES": ("Em queda", "#64748b"),
     "ONDA_AVALIACOES": ("Movimento", "#64748b"),
@@ -80,6 +81,7 @@ h3 a:hover { border-color: currentColor; }
 .preco { display: inline-flex; align-items: center; gap: 7px; }
 .corte { background: #059669; color: #fff; font-weight: 600; padding: 1px 6px; border-radius: 3px; }
 .cheio { text-decoration: line-through; opacity: .55; }
+.subiu { color: #dc2626; font-weight: 600; }
 .final { font-weight: 600; color: #1a1a1a; }
 .bloco { background: #fff; border: 1px solid #e5e5e2; border-radius: 10px; padding: 14px 16px; }
 .bloco > .titulo { font-size: 14px; margin: 0 0 10px; }
@@ -118,10 +120,25 @@ footer .meta { display: inline-block; margin-top: 6px; font-size: 11.5px; opacit
 
 
 def _preco(evento):
-    """Preco no formato da loja: corte, valor cheio riscado e valor final."""
+    """Preco no formato da loja: corte, valor cheio riscado e valor final.
+
+    Promocao encerrada inverte a leitura: o valor riscado e o que deixou de
+    valer, e a seta indica que o preco subiu.
+    """
     final = evento.get("preco")
     if not final:
         return ""
+
+    anterior = evento.get("dados", {}).get("preco_anterior")
+    if evento["tipo"] == "PROMOCAO_ENCERRADA" and anterior:
+        return (
+            '<span class="preco">'
+            f'<span class="cheio">{html.escape(anterior)}</span>'
+            f'<span class="subiu">↑</span>'
+            f'<span class="final">{html.escape(final)}</span>'
+            "</span>"
+        )
+
     cheio = evento.get("preco_cheio")
     desconto = evento.get("desconto") or 0
     if not cheio or not desconto:
@@ -187,15 +204,18 @@ def _bloco_agrupado(evento, destaque=False):
         f'{html.escape(m["nome"])}</a>{_preco(m)}</div>'
         for m in membros
     )
-    faltam = evento["dados"]["faltam"]
-    prazo = {0: "termina hoje", 1: "termina amanhã"}.get(
-        faltam, f"termina em {faltam} dias, dia {evento['dados']['fim'][:5]}"
-    )
-    cor = ROTULOS["PROMOCAO_ACABANDO"][1]
+    if evento["tipo"] == "PROMOCAO_ENCERRADA":
+        prazo = "que saíram de promoção desde a última edição"
+    else:
+        faltam = evento["dados"]["faltam"]
+        prazo = "com promoção que " + {0: "termina hoje", 1: "termina amanhã"}.get(
+            faltam, f"termina em {faltam} dias, dia {evento['dados']['fim'][:5]}"
+        )
+    rotulo, cor = ROTULOS[evento["tipo"]]
     estilo = "" if destaque else f' style="background:{cor}"'
     return f"""<div class="bloco{' manchete' if destaque else ''}">
-  <span class="etiqueta"{estilo}>Acaba em breve</span>
-  <p class="titulo"><b>{len(membros)} títulos</b> com promoção que {prazo}</p>
+  <span class="etiqueta"{estilo}>{rotulo}</span>
+  <p class="titulo"><b>{len(membros)} títulos</b> {prazo}</p>
   <div class="lista">{linhas}</div>
 </div>"""
 
