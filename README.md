@@ -1,10 +1,10 @@
 # Radar VR
 
-Boletim diário do que mudou no catálogo de realidade virtual da Steam —
-promoções, prazos, atualizações e movimentação de jogadores — entregue em
-áudio e em página.
+Boletim diário em áudio sobre o que mudou nos jogos de realidade virtual que
+você acompanha na Steam: atualizações, promoções, prazos e movimentação de
+jogadores.
 
-**AI Factory — Etapa 1 · PUCPR · Rafael Probst**
+**AI Factory, Etapa 1 (PUCPR)** por Rafael Probst
 
 ---
 
@@ -12,10 +12,16 @@ promoções, prazos, atualizações e movimentação de jogadores — entregue e
 
 > A loja mostra **estado**. O que falta é **mudança**.
 
-A página de um jogo informa quanto ele custa agora. Não informa se entrou em
-promoção hoje, se recebeu atualização ontem ou se está perdendo jogadores.
-Essa informação não existe em campo algum da API: só aparece comparando duas
-leituras no tempo. O banco de dados, aqui, não é registro — é o produto.
+Ninguém abre a página de cada jogo todo dia pra ver se saiu patch novo ou se
+tem mais gente jogando. No máximo você repara numa promoção, e olhe lá.
+
+O resto passa batido. Numa semana qualquer, quatro dos quinze títulos
+monitorados aqui receberam anúncio do desenvolvedor, e nenhum deles apareceu na
+vitrine da loja. Movimentação de jogadores e histórico de preço a Steam não
+mostra de jeito nenhum.
+
+Essa informação só existe comparando duas leituras no tempo. Por isso o banco
+de dados aqui não é registro, e sim o próprio produto.
 
 ## Uso
 
@@ -62,7 +68,7 @@ sem chave          + série temporal        LLM + Kokoro      CSV e SQLite
 | `audio/boletim_*.wav` | narração |
 | `data/boletim_atual.html` | leitura, com preço no formato da loja |
 | `data/jornal_vr.csv` | manchetes publicadas |
-| `data/jornal_vr.db` | série temporal — insumo da próxima edição |
+| `data/jornal_vr.db` | série temporal, insumo da próxima edição |
 | `logs/jornal.log` | registro das etapas |
 
 Áudio e página são complementares: a narração serve para varrer o boletim sem
@@ -84,7 +90,7 @@ local tem custo marginal zero e não impõe limite de requisições. A RTX 5060 
 comporta um modelo de 8B integralmente em VRAM.
 
 **O modelo não decide fato com número.** Ele redige apenas onde há texto livre
-a resumir — o corpo de um anúncio. Preço, desconto e variação chegam como
+a resumir, que é o corpo de um anúncio. Preço, desconto e variação chegam como
 frase pronta de regra determinística, auditável e consistente entre execuções.
 
 **A memória de publicação não cresce.** A retenção é derivada da janela de
