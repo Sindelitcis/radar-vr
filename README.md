@@ -22,6 +22,10 @@ Um dia com o Moss II VR no menor preço da história:
 Quem não teve novidade nos seus jogos não recebe nada. O alerta do Telegram
 traz só o urgente, porque o resto já está no e-mail.
 
+Cada fato é avisado uma vez. O menor preço da história só volta a ser
+notícia se o preço cair mais, e a promoção que está acabando aparece duas
+vezes: a 5 dias do fim, no e-mail, e a 2 dias, também no Telegram.
+
 ## Como funciona
 
 O fluxo roda no n8n. Cada passo chama um microsserviço Python
@@ -41,8 +45,8 @@ Quando um passo falha, o n8n desvia o caminho:
 
 | Falhou | O que acontece |
 |---|---|
-| E-mail | o alerta do Telegram leva também as outras novidades do dia, e o operador recebe um aviso |
-| Telegram | o alerta vai por e-mail |
+| E-mail | se houver algo urgente, o alerta do Telegram leva também as outras novidades do dia; o operador recebe um aviso pelo Telegram |
+| Telegram | o urgente já está no e-mail do dia, então nada é reenviado; o operador recebe um aviso por e-mail |
 | E-mail e Telegram | nada chega ao assinante nessa edição; a falha fica registrada em log |
 | Microsserviço fora do ar | o n8n grava a falha em `logs/n8n_falhas.log` e encerra a execução |
 
@@ -72,7 +76,7 @@ fluxo *Radar VR - Boletim personalizado* e clique em *Execute workflow*.
 
 | Modo | O que acontece |
 |---|---|
-| Ensaio | o fluxo roda inteiro, mas nenhuma mensagem sai da máquina (`RADAR_DRY_RUN=1`) |
+| Ensaio | o fluxo roda inteiro, mas nenhuma mensagem sai da máquina e o histórico não muda (`RADAR_DRY_RUN=1`) |
 | Real | e-mail e Telegram chegam aos assinantes de `perfis.json` |
 
 Cada assinante recebe no máximo uma mensagem por canal e por edição. Executar
@@ -147,7 +151,7 @@ fictícios. Principais resultados (detalhes em
 | [Canvas](docs/02_canvas.md) | objetivos, escopo, riscos e critérios |
 | [Arquitetura](docs/03_arquitetura.md) | módulos, eventos e limiares |
 | [Ambiente](docs/04_ambiente.md) | instalação e evidências da Etapa 1 |
-| [n8n](docs/05_n8n.md) | fluxos, passagem de dados e contingência |
+| [n8n](docs/05_n8n.md) | fluxos, passagem de dados e desvios de erro |
 | [Microsserviço e canais](docs/06_canais.md) | rotas, personalização e tratamento de erros |
 | [Testes de carga](docs/07_testes.md) | gargalos, melhorias e números |
 

@@ -166,7 +166,7 @@ de conexão, o Ollama não é chamado por 60 s.
 | Cenário | Resultado esperado | Resultado |
 |---|---|---|
 | 50 pedidos simultâneos idênticos de envio | 1 envio, 49 bloqueados | 1 `simulado`, 49 `duplicado` |
-| Canal instantâneo fora do ar | 502 com o motivo; n8n desvia para e-mail | 502; contingência executada |
+| Canal instantâneo fora do ar | 502 com o motivo; n8n registra e avisa o operador | 502; falha registrada, nenhum e-mail repetido |
 | Microsserviço fora do ar | n8n registra e encerra com erro | `logs/n8n_falhas.log`, execução com erro |
 | Corpo sem campos obrigatórios | 400 com a lista | 400: `edicao_id, para, assunto, html` |
 | Anexo `../../.env` | nenhum arquivo fora de `audio/` | só o nome é usado; arquivo inexistente, nada anexado |

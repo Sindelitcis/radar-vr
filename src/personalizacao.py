@@ -28,7 +28,6 @@ import itad
 
 log = logging.getLogger("perfil")
 
-PRAZO_URGENTE_DIAS = 2
 MAX_ITENS_EMAIL = 6
 MAX_ITENS_ALERTA = 3
 
@@ -83,7 +82,7 @@ def _urgente(evento):
     if evento["tipo"] == "PRECO_MINIMO":
         return True
     if evento["tipo"] == "PROMOCAO_ACABANDO":
-        return evento.get("dados", {}).get("faltam", 99) <= PRAZO_URGENTE_DIAS
+        return evento.get("dados", {}).get("faltam", 99) <= config.PRAZO_URGENTE_DIAS
     return False
 
 

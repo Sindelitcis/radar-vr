@@ -61,8 +61,8 @@ execução seguinte para que a comparação tenha significado.
 
 | Evento | Peso | Condição |
 |---|:-:|---|
-| `PROMOCAO_ACABANDO` | 90 | término informado pela loja em até 5 dias |
-| `PRECO_MINIMO` | 85 | preço abaixo do menor já registrado |
+| `PROMOCAO_ACABANDO` | 90 | término informado pela loja; avisado ao faltarem 5 dias e de novo ao faltarem 2 |
+| `PRECO_MINIMO` | 85 | menor preço da história pelo IsThereAnyDeal (ou abaixo do menor já registrado), e mais baixo que na edição anterior |
 | `PATCH_GRANDE` | 70 | anúncio do desenvolvedor nos últimos 7 dias, ainda não publicado |
 | `PROMOCAO_NOVA` | 55 | desconto onde antes não havia |
 | `PROMOCAO_ENCERRADA` | 50 | desconto que voltou a zero desde a edição anterior |

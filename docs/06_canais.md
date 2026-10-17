@@ -42,10 +42,10 @@ canal sem afetar os outros.
 | `POST /personalizar` | um envelope por assinante com novidade relevante |
 | `POST /enviar/email` | envia o boletim personalizado, com a narração anexa |
 | `POST /enviar/instantaneo` | envia o alerta por Telegram ou WhatsApp |
-| `POST /falha` | registra falha vinda do n8n e avisa o operador por e-mail |
+| `POST /falha` | registra falha vinda do n8n e avisa o operador por e-mail; se o e-mail não sair, pelo Telegram |
 
 Envio que falha responde **502** com o resultado no corpo. Para o n8n, isso é
-erro, e o item segue pela saída de erro do nó, que leva à contingência.
+erro, e o item segue pela saída de erro do nó.
 
 ## 3. Personalização
 
@@ -160,8 +160,8 @@ mensagem iniciada pela empresa é cobrada. Trocar de canal é editar
 | Credencial inválida, destinatário recusado | falha definitiva, sem nova tentativa |
 | ITAD fora do ar | edição segue sem histórico de preços |
 | Ollama fora do ar | edição segue com o resumo factual no lugar da síntese do anúncio; disjuntor evita esperar o timeout a cada chamada |
-| Canal instantâneo falha | n8n desvia o alerta para o e-mail |
-| E-mail falha | n8n registra em `/falha`, que avisa o operador |
+| Canal instantâneo falha | n8n registra em `/falha`, que avisa o operador; o urgente já foi no e-mail |
+| E-mail falha | o alerta leva as demais novidades; `/falha` avisa o operador pelo Telegram |
 | Microsserviço fora do ar | n8n tenta de novo, grava `logs/n8n_falhas.log` e encerra com erro |
 | Falha em execução agendada | fluxo "Tratamento de falhas" (Error Trigger) registra e avisa |
 | Repetição do mesmo envio | bloqueada: um envio por assinante, canal e edição |
@@ -195,8 +195,9 @@ fluxos do n8n, que leem `RADAR_SERVICO_URL` e `RADAR_DIR_LOGS` por `$env`.
 
 | Variável | Efeito |
 |---|---|
-| `RADAR_DRY_RUN` | nenhuma mensagem sai da máquina; usado nos testes de carga |
-| `RADAR_FALHAR_CANAIS` | força falha de um canal para exercitar a contingência |
+| `RADAR_DRY_RUN` | nenhuma mensagem sai da máquina e o histórico não é gravado; usado no ensaio e nos testes de carga |
+| `RADAR_FALHAR_CANAIS` | força falha de um canal para exercitar os desvios de erro |
+| `RADAR_OPERADOR_TELEGRAM` | chat do operador, para o aviso de falha quando o e-mail não sai |
 | `RADAR_COLETA_PARALELA` | coletas simultâneas na Steam |
 | `RADAR_DISJUNTOR_S` | tempo sem chamar o Ollama depois de uma recusa de conexão |
 | `RADAR_FORCAR_IPV4` | evita o timeout de IPv6 até a API do Telegram |
@@ -208,5 +209,7 @@ fluxos do n8n, que leem `RADAR_SERVICO_URL` e `RADAR_DIR_LOGS` por `$env`.
 - O Telegram só entrega a quem iniciou conversa com o bot.
 - Cada e-mail informa a data de inscrição e como sair.
 - Nenhum envio repete para o mesmo assinante, canal e edição.
+- Nenhum fato repete entre edições: o recorde de preço só volta se o preço
+  cair mais, e a promoção acabando é avisada a 5 dias e a 2 dias do fim.
 - Só há alerta instantâneo com urgência real; sem novidade, nada é enviado.
 - Testes de carga usam DRY_RUN e endereços `@exemplo.invalid`.

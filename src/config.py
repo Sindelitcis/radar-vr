@@ -76,6 +76,7 @@ MANCHETES_NO_BOLETIM = 6
 # -------------------------------------------------- limiares de relevancia
 NOTICIA_RECENTE_DIAS = 7
 AVISO_FIM_PROMOCAO_DIAS = 5
+PRAZO_URGENTE_DIAS = 2         # promocao acabando vira alerta instantaneo
 PICO_BASE_MINIMA = 80          # jogadores na leitura anterior
 PICO_VARIACAO_MINIMA = 25.0    # % de alta
 QUEDA_VARIACAO_MINIMA = 35.0   # % de baixa
@@ -128,7 +129,7 @@ ARQ_PERFIS = RAIZ / _env("RADAR_PERFIS", "perfis.json")
 # como simulado. Os testes de carga dependem disso.
 DRY_RUN = _env_bool("RADAR_DRY_RUN")
 
-# Canais que devem falhar de proposito, para exercitar a contingencia em teste.
+# Canais que devem falhar de proposito, para exercitar os desvios de erro em teste.
 # Exemplo: RADAR_FALHAR_CANAIS=telegram
 FALHAR_CANAIS = {c.strip() for c in _env("RADAR_FALHAR_CANAIS").split(",") if c.strip()}
 
@@ -141,6 +142,8 @@ SMTP_HOST = _env("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORTA = int(_env("SMTP_PORTA", "465"))
 
 TELEGRAM_TOKEN = _env("TELEGRAM_TOKEN")
+# Chat do operador: recebe o aviso de falha quando o e-mail nao sai.
+OPERADOR_TELEGRAM = _env("RADAR_OPERADOR_TELEGRAM")
 
 WHATSAPP_TOKEN = _env("WHATSAPP_TOKEN")
 WHATSAPP_PHONE_ID = _env("WHATSAPP_PHONE_ID")

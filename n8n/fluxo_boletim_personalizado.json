@@ -169,26 +169,23 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.RADAR_SERVICO_URL }}/enviar/email",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/falha",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ edicao_id: $('Personalizar por assinante').item.json.edicao_id, perfil_id: $('Personalizar por assinante').item.json.perfil_id, contingencia: true, para: $('Personalizar por assinante').item.json.email.para, assunto: 'Alerta urgente: ' + $('Personalizar por assinante').item.json.email.assunto, html: '<p>' + $('Personalizar por assinante').item.json.instantaneo.texto.split(String.fromCharCode(10)).join('<br>') + '</p>' }) }}",
+        "jsonBody": "={{ JSON.stringify({ no: 'Enviar alerta instantâneo', perfil_id: $('Personalizar por assinante').item.json.perfil_id, edicao_id: $('Personalizar por assinante').item.json.edicao_id, canal: $('Personalizar por assinante').item.json.instantaneo.canal, email_status: $('Enviar boletim por e-mail').item.json.error ? 'falhou' : 'enviado', mensagem: $json.error?.message || 'falha no envio' }) }}",
         "options": {
           "timeout": 60000
         }
       },
       "id": "f7fbcfcb-188b-51af-8d76-9701c3f74dcc",
-      "name": "Contingência: alerta por e-mail",
+      "name": "Registrar falha do alerta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         1440,
         200
       ],
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 3000,
-      "notes": "Se o canal instantâneo falhar, o alerta segue por e-mail."
+      "notes": "O urgente já está no e-mail do dia; reenviar por e-mail só repetiria a mensagem."
     },
     {
       "parameters": {
@@ -403,7 +400,7 @@
         [],
         [
           {
-            "node": "Contingência: alerta por e-mail",
+            "node": "Registrar falha do alerta",
             "type": "main",
             "index": 0
           }

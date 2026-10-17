@@ -110,7 +110,12 @@ def publicar(titulos=None, gerar_audio=True, extras=()):
     passo = marcar("historico_precos", passo)
 
     selecionados, todos = noticias.detectar(conexao, catalogo, anterior)
-    historico.gravar_snapshot(conexao, catalogo)
+    # O ensaio nao altera o historico: senao cada ensaio consumiria as
+    # novidades do dia, e a execucao real nao teria o que enviar.
+    if config.DRY_RUN:
+        log.info("Ensaio: leituras e anúncios não são gravados no histórico")
+    else:
+        historico.gravar_snapshot(conexao, catalogo)
     passo = marcar("deteccao", passo)
 
     if selecionados:
@@ -142,11 +147,13 @@ def publicar(titulos=None, gerar_audio=True, extras=()):
         selecionados, len(catalogo), primeira_edicao, caminho_audio
     )
 
-    historico.registrar_edicao(
-        conexao, len(catalogo), len(todos), caminho_audio, pagina.name
-    )
-    marcados = historico.registrar_noticias(conexao, selecionados)
-    podados = historico.podar_noticias(conexao)
+    marcados = podados = 0
+    if not config.DRY_RUN:
+        historico.registrar_edicao(
+            conexao, len(catalogo), len(todos), caminho_audio, pagina.name
+        )
+        marcados = historico.registrar_noticias(conexao, selecionados)
+        podados = historico.podar_noticias(conexao)
     memoria = conexao.execute(
         "SELECT COUNT(*) FROM noticias_publicadas"
     ).fetchone()[0]

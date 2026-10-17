@@ -65,6 +65,16 @@ def _evento(tipo, jogo, resumo, score, dados=None):
     }
 
 
+def _prazo_mudou(fim, faltam, antes):
+    """Promocao acabando vira noticia duas vezes: ao entrar na janela de aviso
+    e ao entrar no prazo urgente. Nos outros dias o fato e o mesmo de ontem."""
+    if not antes or not (antes.get("desconto") or 0):
+        return True
+    faltavam = (fim.date() - datetime.fromisoformat(antes["coletado_em"]).date()).days
+    return any(faltam <= limite < faltavam
+               for limite in (config.AVISO_FIM_PROMOCAO_DIAS, config.PRAZO_URGENTE_DIAS))
+
+
 def _eventos_de_preco(conexao, jogo, antes):
     eventos = []
     preco = jogo.get("preco_num")
@@ -108,7 +118,7 @@ def _eventos_de_preco(conexao, jogo, antes):
     fim = jogo.get("fim_promocao")
     if fim:
         faltam = (fim.date() - datetime.now().date()).days
-        if 0 <= faltam <= config.AVISO_FIM_PROMOCAO_DIAS:
+        if 0 <= faltam <= config.AVISO_FIM_PROMOCAO_DIAS and _prazo_mudou(fim, faltam, antes):
             prazo = {
                 0: "termina hoje",
                 1: "termina amanhã",
@@ -132,6 +142,12 @@ def _eventos_de_preco(conexao, jogo, antes):
     # A serie propria fica como alternativa quando o jogo nao esta no ITAD.
     itad = jogo.get("itad")
     if itad and desconto and preco <= itad["menor_preco"] * config.ITAD_MARGEM_MINIMO:
+        # O recorde continua valendo enquanto a oferta durar. So e fato novo
+        # se o preco caiu desde a leitura anterior.
+        ja_noticiado = (antes and (antes.get("desconto") or 0)
+                        and antes.get("preco_num") and preco >= antes["preco_num"])
+        if ja_noticiado:
+            return eventos
         quando = itad["data_menor"]
         # O ITAD atualiza o recorde quando a promocao atual o bate; nesse caso
         # a data do recorde e a desta propria oferta e nao vale cita-la.

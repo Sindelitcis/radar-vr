@@ -12,11 +12,12 @@ Expoe o pipeline e os canais para o n8n, que orquestra a sequencia:
     GET  /                    lista das rotas
 
 Envio que falha responde 502 com o resultado no corpo: o n8n trata o status
-como erro e desvia o item para o ramo de contingencia.
+como erro e desvia o item para a saida de erro do no.
 
 Uso:
     python src/servico.py
 """
+import html
 import json
 import logging
 import threading
@@ -155,8 +156,7 @@ def _enviar(corpo, canal, funcao, **detalhes):
 def enviar_email(corpo):
     _exigir(corpo, "edicao_id", "perfil_id", "para", "assunto", "html")
     anexo = _anexo(corpo.get("anexo"))
-    canal = "email_contingencia" if corpo.get("contingencia") else "email"
-    return _enviar(corpo, canal, lambda: canais.enviar_email(
+    return _enviar(corpo, "email", lambda: canais.enviar_email(
         corpo["para"], corpo["assunto"], corpo["html"], corpo.get("texto", ""), anexo))
 
 
@@ -178,13 +178,23 @@ def enviar_instantaneo(corpo):
 def registrar_falha(corpo):
     auditoria.registrar("falha_fluxo", **{k: str(v)[:500] for k, v in corpo.items()})
     log.error("Falha no fluxo n8n: %s em %s", corpo.get("mensagem"), corpo.get("no"))
+    no = str(corpo.get("no", "?"))[:60]
     aviso = canais.enviar_email(
         config.GMAIL_USER,
-        f"[Radar VR] Falha no fluxo: {str(corpo.get('no', '?'))[:60]}",
+        f"[Radar VR] Falha no fluxo: {no}",
         "<p>O n8n reportou uma falha.</p><pre>"
         + json.dumps(corpo, ensure_ascii=False, indent=2)[:4000] + "</pre>",
-    ) if config.GMAIL_USER else {"status": "sem destinatário"}
-    return 200, {"registrado": True, "aviso_operador": aviso["status"]}
+    ) if config.GMAIL_USER else {"status": "falhou", "canal": "email"}
+    # Se a falha for do proprio Gmail, o aviso por e-mail tambem nao sai.
+    if aviso["status"] == "falhou" and config.OPERADOR_TELEGRAM:
+        aviso = canais.enviar_telegram(
+            config.OPERADOR_TELEGRAM,
+            f"⚠️ <b>Radar VR</b>: falha em {html.escape(no)}\n"
+            f"{html.escape(str(corpo.get('mensagem', ''))[:300])}",
+        )
+    log.info("Aviso ao operador: %s por %s", aviso["status"], aviso.get("canal", "-"))
+    return 200, {"registrado": True, "aviso_operador": aviso["status"],
+                 "canal_aviso": aviso.get("canal")}
 
 
 ROTAS = {
