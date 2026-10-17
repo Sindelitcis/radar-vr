@@ -148,7 +148,7 @@
         "url": "={{ $env.RADAR_SERVICO_URL }}/enviar/instantaneo",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ edicao_id: $('Personalizar por assinante').item.json.edicao_id, perfil_id: $('Personalizar por assinante').item.json.perfil_id, ...$('Personalizar por assinante').item.json.instantaneo, email_status: $('Enviar boletim por e-mail').item.json.status }) }}",
+        "jsonBody": "={{ JSON.stringify({ edicao_id: $('Personalizar por assinante').item.json.edicao_id, perfil_id: $('Personalizar por assinante').item.json.perfil_id, ...$('Personalizar por assinante').item.json.instantaneo, email_status: $('Enviar boletim por e-mail').item.json.error ? 'falhou' : 'enviado' }) }}",
         "options": {
           "timeout": 60000
         }
@@ -375,6 +375,11 @@
         [
           {
             "node": "Registrar falha do e-mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tem alerta urgente?",
             "type": "main",
             "index": 0
           }

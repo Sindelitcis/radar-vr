@@ -133,22 +133,24 @@ def _eventos_de_preco(conexao, jogo, antes):
     itad = jogo.get("itad")
     if itad and desconto and preco <= itad["menor_preco"] * config.ITAD_MARGEM_MINIMO:
         quando = itad["data_menor"]
-        data = f" de {quando[5:7]}/{quando[:4]}" if quando else ""
         # O ITAD atualiza o recorde quando a promocao atual o bate; nesse caso
-        # a data do recorde e a desta propria oferta.
-        recente = quando and (datetime.now() - datetime.fromisoformat(quando)).days <= 14
-        if recente:
-            resumo = f"está por {jogo['preco']}, o menor preço da história do jogo"
-        elif preco < itad["menor_preco"]:
-            resumo = (f"está por {jogo['preco']}, abaixo do recorde anterior"
-                      f"{data}, de {_reais(itad['menor_preco'])}")
-        else:
-            resumo = f"está por {jogo['preco']}, igual ao menor preço da história{data}"
+        # a data do recorde e a desta propria oferta e nao vale cita-la.
+        recente = bool(quando) and (
+            datetime.now() - datetime.fromisoformat(quando)
+        ).days <= 14
+        resumo = f"está por {jogo['preco']}, menor preço histórico"
+        if quando and not recente:
+            data = datetime.fromisoformat(quando)
+            resumo += (f", visto pela última vez em "
+                       f"{pronuncia.MESES[data.month - 1]} de {data.year}")
         eventos.append(_evento(
-            "PRECO_MINIMO", jogo,
-            resumo,
+            "PRECO_MINIMO", jogo, resumo,
             PESOS["PRECO_MINIMO"] + desconto / 4,
-            {"menor_historico": itad["menor_preco"], "fonte": "IsThereAnyDeal"},
+            {
+                "menor_historico": itad["menor_preco"],
+                "visto_em": f"{quando[5:7]}/{quando[:4]}" if quando and not recente else "",
+                "fonte": "IsThereAnyDeal",
+            },
         ))
         return eventos
 

@@ -9,7 +9,6 @@ Expoe o pipeline e os canais para o n8n, que orquestra a sequencia:
     POST /enviar/instantaneo  envia o alerta por Telegram ou WhatsApp
     POST /falha               registra falha reportada pelo n8n e avisa o operador
     GET  /saude               dependencias e configuracao
-    GET  /metricas            contadores da personalizacao
 
 Envio que falha responde 502 com o resultado no corpo: o n8n trata o status
 como erro e desvia o item para o ramo de contingencia.
@@ -110,11 +109,11 @@ def personalizar(corpo):
             itens=envelope["itens"], urgentes=envelope["urgentes"],
             email=bool(envelope["email"]),
             instantaneo=(envelope["instantaneo"] or {}).get("canal"),
-            motivo=envelope["motivo"], origem_texto=envelope["origem_texto"],
+            motivo=envelope["motivo"],
             latencia_ms=envelope["latencia_ms"],
         )
-    log.info("Personalização: %d perfis em %.1f s %s", len(perfis),
-             time.perf_counter() - inicio, personalizacao.metricas())
+    log.info("Personalização: %d perfis em %.2f s", len(perfis),
+             time.perf_counter() - inicio)
     if corpo.get("todos"):
         return 200, envelopes
     return 200, [e for e in envelopes if e["email"]]
@@ -129,7 +128,7 @@ def _anexo(nome):
     return caminho
 
 
-def _enviar(corpo, canal, funcao):
+def _enviar(corpo, canal, funcao, **detalhes):
     edicao_id, perfil_id = corpo["edicao_id"], corpo["perfil_id"]
     destino = corpo.get("para") or corpo.get("destino")
     if not auditoria.reservar_envio(edicao_id, perfil_id, canal):
@@ -140,7 +139,7 @@ def _enviar(corpo, canal, funcao):
     resultado = funcao()
     auditoria.concluir_envio(edicao_id, perfil_id, canal, resultado["status"])
     auditoria.registrar("envio", edicao_id=edicao_id, perfil=perfil_id,
-                        destino=auditoria.mascarar(destino), **resultado)
+                        destino=auditoria.mascarar(destino), **detalhes, **resultado)
     nivel = logging.WARNING if resultado["status"] == "falhou" else logging.INFO
     log.log(nivel, "%-9s %-8s %-9s %5d ms %s", canal, perfil_id, resultado["status"],
             resultado["latencia_ms"], resultado["erro"])
@@ -161,10 +160,13 @@ def enviar_instantaneo(corpo):
     if not funcao:
         raise ErroCliente(400, f"canal desconhecido: {corpo['canal']}")
     texto = corpo["texto"]
-    # O alerta remete ao e-mail; se o e-mail nao saiu, a referencia sai do texto.
-    if corpo.get("email_status") == "falhou":
-        texto = texto.split("\n\nBoletim completo")[0]
-    return _enviar(corpo, corpo["canal"], lambda: funcao(corpo["destino"], texto))
+    # O n8n informa como foi o e-mail. Se ele falhou, o alerta leva tambem as
+    # demais novidades do dia, que so estariam no e-mail.
+    if corpo.get("email_status") == "falhou" and corpo.get("complemento"):
+        texto += "\n\n" + corpo["complemento"]
+    return _enviar(corpo, corpo["canal"], lambda: funcao(corpo["destino"], texto),
+                   email_status=corpo.get("email_status"),
+                   com_complemento=texto != corpo["texto"])
 
 
 def registrar_falha(corpo):
@@ -179,14 +181,9 @@ def registrar_falha(corpo):
     return 200, {"registrado": True, "aviso_operador": aviso["status"]}
 
 
-def metricas(_):
-    return 200, personalizacao.metricas()
-
-
 ROTAS = {
     ("GET", "/saude"): saude,
     ("GET", "/edicao/atual"): edicao_atual,
-    ("GET", "/metricas"): metricas,
     ("POST", "/edicao"): gerar_edicao,
     ("POST", "/personalizar"): personalizar,
     ("POST", "/enviar/email"): enviar_email,

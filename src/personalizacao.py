@@ -5,68 +5,35 @@ Para cada perfil, tres decisoes em sequencia:
     1. selecao   que fatos da edicao interessam a esta pessoa
     2. canal     e-mail sempre que houver fato relevante; alerta instantaneo
                  so quando ha urgencia (oferta acabando, menor preco)
-    3. redacao   o LLM escreve assunto, abertura e alerta a partir dos fatos
+    3. texto     assunto, abertura e alerta montados a partir dos fatos
 
-A regra decide e o modelo redige, mesmo principio da edicao geral. Canal e
-urgencia precisam ser explicaveis e reproduziveis; tom e fluidez nao.
+Tudo aqui e regra. O LLM fica na edicao, onde resume o texto livre dos
+anuncios; os cartoes reaproveitam esse resumo. Uma versao anterior usava o
+modelo para escrever o assunto de cada assinante, e saiu por dois motivos
+medidos: era o gargalo da personalizacao e inventava detalhes que nao
+estavam nos fatos (docs/07_testes.md).
 
-O texto do modelo passa por uma verificacao: todo numero citado precisa
-existir nos fatos de entrada. Se o modelo inventar um preco, o texto e
-descartado e entra o modelo de frase fixo.
+As mensagens sao feitas para leitura de relance: so o que mudou, um rotulo
+colorido por fato, preco com o corte em destaque e uma linha curta.
 """
-import hashlib
 import html
 import json
 import logging
-import re
-import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+import boletim_html
 import config
 import itad
-import redacao
 
 log = logging.getLogger("perfil")
 
-TIPOS_URGENTES = {"PROMOCAO_ACABANDO", "PRECO_MINIMO"}
 PRAZO_URGENTE_DIAS = 2
+MAX_ITENS_EMAIL = 6
+MAX_ITENS_ALERTA = 3
 
-SISTEMA = (
-    "Voce escreve mensagens curtas para assinantes de um boletim de jogos de "
-    "realidade virtual, em portugues do Brasil. Tom proximo e direto, sem "
-    "exagero de marketing. Voce nunca inventa, arredonda ou altera numeros: "
-    "usa apenas os que aparecem nos fatos. Evita frases feitas como 'nao "
-    "perca' ou 'corra'."
-)
-
-GABARITO = """Escreva os textos do boletim pessoal a partir dos fatos abaixo.
-Responda APENAS com JSON valido:
-
-{{"assunto": "assunto do e-mail, ate 70 caracteres",
-  "abertura": "duas frases que resumem o que importa hoje para esta pessoa",
-  "alerta": "{instrucao_alerta}"}}
-
-Regras:
-- Use somente os fatos listados. Nao acrescente jogos, precos ou datas.
-- Nao cumprimente pelo nome; a saudacao e inserida depois.
-- Sem emoji, sem exclamacao em excesso.
-
-INTERESSES: {interesses}
-FATOS:
-{fatos}
-URGENTES:
-{urgentes}"""
-
-_cache = {}
-_cache_trava = threading.Lock()
-_metricas = {"llm": 0, "cache": 0, "regra": 0}
-
-
-def _contar(origem):
-    with _cache_trava:
-        _metricas[origem] += 1
+TIPOS_DE_PRECO = {"PRECO_MINIMO", "PROMOCAO_ACABANDO", "PROMOCAO_NOVA", "PROMOCAO_ENCERRADA"}
+ICONES = {"PRECO_MINIMO": "🔥", "PROMOCAO_ACABANDO": "⏳"}
 
 
 # ------------------------------------------------------------------ perfis
@@ -93,10 +60,6 @@ def jogos_seguidos(perfis):
 
 # ----------------------------------------------------------------- selecao
 
-def _reais(valor):
-    return f"R$ {valor:.2f}".replace(".", ",")
-
-
 def _expandir(eventos):
     """Desfaz os agrupamentos: o interesse e avaliado jogo a jogo."""
     for evento in eventos:
@@ -116,7 +79,7 @@ def _interessa(perfil, jogo):
     return bool(generos & {g.lower() for g in perfil.get("generos", [])})
 
 
-def _urgente(perfil, evento):
+def _urgente(evento):
     if evento["tipo"] == "PRECO_MINIMO":
         return True
     if evento["tipo"] == "PROMOCAO_ACABANDO":
@@ -135,202 +98,193 @@ def selecionar(perfil, edicao):
         if chave in vistos or not _interessa(perfil, jogo):
             continue
         vistos.add(chave)
-        itens.append(evento)
         dentro_do_orcamento = (
             orcamento is None or (jogo.get("preco_num") or 0) <= orcamento
         )
-        if _urgente(perfil, evento) and dentro_do_orcamento:
+        if _urgente(evento) and dentro_do_orcamento:
             urgentes.append(evento)
-
-    seguidos = [catalogo[a] for a in perfil.get("jogos", []) if a in catalogo]
-    return {"itens": itens, "urgentes": urgentes, "seguidos": seguidos}
+        else:
+            itens.append(evento)
+    return {"urgentes": urgentes, "itens": itens}
 
 
 def _fato(evento):
     return evento.get("linha") or f"{evento['nome']} {evento['resumo']}"
 
 
-def _fato_seguido(jogo):
-    partes = [f"{jogo['nome']}: {jogo['preco']}"]
-    if jogo.get("desconto"):
-        partes.append(f"com {jogo['desconto']}% de desconto")
-    historico = jogo.get("itad")
-    if historico:
-        partes.append(f"menor preço da história {_reais(historico['menor_preco'])}"
-                      f" ({historico['loja_menor']})")
-    return ", ".join(partes)
+def destaque(evento):
+    """O fato em poucas palavras, para ler de relance."""
+    dados = evento.get("dados", {})
+    tipo = evento["tipo"]
+    if tipo == "PRECO_MINIMO":
+        visto = dados.get("visto_em")
+        return "Menor preço histórico" + (f" · visto pela última vez em {visto}" if visto else "")
+    if tipo == "PROMOCAO_ACABANDO":
+        faltam = dados.get("faltam", 0)
+        return {0: "Promoção acaba hoje", 1: "Promoção acaba amanhã"}.get(
+            faltam, f"Promoção acaba em {faltam} dias")
+    if tipo == "PROMOCAO_NOVA":
+        return "Entrou em promoção" if evento["resumo"].startswith("entrou") else "Em promoção"
+    if tipo == "PROMOCAO_ENCERRADA":
+        return "Saiu de promoção"
+    if tipo in ("PICO_JOGADORES", "QUEDA_JOGADORES") and dados.get("variacao") is not None:
+        return f"{dados['variacao']:+.0f}% jogadores online"
+    if tipo == "ONDA_AVALIACOES" and dados.get("novas"):
+        return f"+{dados['novas']} avaliações"
+    texto = _fato(evento)
+    if texto.startswith(evento["nome"]):
+        texto = texto[len(evento["nome"]):].strip(" ,.:")
+    texto = texto[:1].upper() + texto[1:]
+    return texto if len(texto) <= 90 else texto[:87].rstrip() + "…"
 
 
-# ----------------------------------------------------------------- redacao
+# ------------------------------------------------------------------- texto
 
-def _numeros(texto):
-    return set(re.findall(r"\d+(?:[.,]\d+)?", texto))
+def _assunto_de(evento):
+    nome, tipo = evento["nome"], evento["tipo"]
+    if tipo == "PRECO_MINIMO":
+        return f"{nome} no menor preço histórico"
+    if tipo == "PROMOCAO_ACABANDO":
+        return f"{destaque(evento).replace('Promoção', f'Promoção de {nome}', 1)}"
+    if tipo == "PROMOCAO_NOVA":
+        return f"{nome} entrou em promoção"
+    if tipo == "PATCH_GRANDE":
+        return f"{nome} recebeu atualização"
+    return f"Novidade em {nome}"
 
 
-def _confere(gerado, fontes):
-    """Todo numero do texto gerado precisa constar nos fatos."""
-    permitidos = _numeros(fontes)
-    return all(n in permitidos for n in _numeros(gerado))
+def textos(selecao):
+    """Assunto e abertura do e-mail, a partir do fato mais importante."""
+    eventos = selecao["urgentes"] + selecao["itens"]
+    urgentes, demais = len(selecao["urgentes"]), len(selecao["itens"])
+    assunto = _assunto_de(eventos[0])
+    if len(eventos) > 1:
+        assunto += f" e mais {len(eventos) - 1}"
 
-
-def _texto_padrao(perfil, selecao):
-    itens, urgentes = selecao["itens"], selecao["urgentes"]
+    partes = []
     if urgentes:
-        assunto = f"Radar VR: {urgentes[0]['nome']} pede atenção hoje"
-    elif itens:
-        assunto = f"Radar VR: {len(itens)} novidades nos seus jogos"
-    else:
-        assunto = "Radar VR: seus jogos hoje"
-    abertura = (
-        f"Separei {len(itens)} movimentos que combinam com o que você acompanha."
-        if itens else "Nenhum movimento novo nos seus jogos desde a última edição."
-    )
-    alerta = _fato(urgentes[0]) if urgentes else ""
-    return {"assunto": assunto, "abertura": abertura, "alerta": alerta}
-
-
-def _assinatura(perfil, fatos, urgentes):
-    """Chave do cache: o conteudo que o modelo recebe, sem dado pessoal.
-
-    Assinantes com os mesmos interesses recebem os mesmos fatos; o texto
-    gerado para um serve para todos.
-    """
-    base = json.dumps([sorted(perfil.get("generos", [])), fatos, urgentes],
-                      ensure_ascii=False)
-    return hashlib.sha1(base.encode("utf-8")).hexdigest()
-
-
-def redigir(perfil, selecao):
-    """Devolve (textos, origem). Origem: llm, cache ou regra."""
-    fatos = [_fato(e) for e in selecao["itens"][:8]]
-    fatos += [_fato_seguido(j) for j in selecao["seguidos"]]
-    urgentes = [_fato(e) for e in selecao["urgentes"]]
-    padrao = _texto_padrao(perfil, selecao)
-    if not fatos:
-        _contar("regra")
-        return padrao, "regra"
-
-    chave = _assinatura(perfil, fatos, urgentes)
-    if config.CACHE_REDACAO:
-        with _cache_trava:
-            if chave in _cache:
-                _metricas["cache"] += 1
-                return dict(_cache[chave]), "cache"
-
-    instrucao = (
-        "uma mensagem de ate 280 caracteres sobre o fato urgente, para chat"
-        if urgentes else "deixe vazio"
-    )
-    prompt = GABARITO.format(
-        instrucao_alerta=instrucao,
-        interesses=", ".join(perfil.get("generos", [])) or "jogos seguidos",
-        fatos="\n".join(f"- {f}" for f in fatos),
-        urgentes="\n".join(f"- {u}" for u in urgentes) or "- nenhum",
-    )
-    fontes = "\n".join(fatos + urgentes)
-    try:
-        bruto = redacao.chamar(prompt, SISTEMA)
-        gerado = redacao.extrair_json(bruto) or {}
-        textos = {
-            "assunto": str(gerado.get("assunto", "")).strip()[:90],
-            "abertura": str(gerado.get("abertura", "")).strip()[:600],
-            "alerta": str(gerado.get("alerta", "")).strip()[:400] if urgentes else "",
-        }
-        if not textos["assunto"] or not textos["abertura"]:
-            raise ValueError("resposta incompleta")
-        if not _confere(" ".join(textos.values()), fontes):
-            raise ValueError("número ausente dos fatos")
-    except Exception as erro:
-        log.warning("Redação do perfil %s pela regra: %s", perfil["id"], erro)
-        _contar("regra")
-        return padrao, "regra"
-
-    if urgentes and not textos["alerta"]:
-        textos["alerta"] = padrao["alerta"]
-    with _cache_trava:
-        _cache[chave] = dict(textos)
-        _metricas["llm"] += 1
-    return textos, "llm"
+        partes.append("Uma oferta pede atenção hoje." if urgentes == 1
+                      else f"{urgentes} ofertas pedem atenção hoje.")
+    if demais:
+        partes.append("Uma novidade nos seus jogos." if demais == 1
+                      else f"{demais} novidades nos seus jogos.")
+    return {"assunto": assunto, "abertura": " ".join(partes)}
 
 
 # ------------------------------------------------------------------ e-mail
 
-ESTILO_EMAIL = (
-    "font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;"
-    "color:#1a1a1a;line-height:1.5;max-width:600px;margin:0 auto;padding:24px"
-)
+FONTE_EMAIL = "-apple-system,'Segoe UI',Roboto,Arial,sans-serif"
+LARANJA, LARANJA_CLARO = "#ea580c", "#fff7ed"
+VERDE = "#059669"
 
 
-def _linha_item(evento):
-    return (
-        f'<li style="margin:0 0 10px">'
-        f'<a href="{html.escape(evento["url"])}" style="color:#1a1a1a;font-weight:600">'
-        f'{html.escape(evento["nome"])}</a><br>'
-        f'<span style="color:#444">{html.escape(_fato(evento))}</span></li>'
-    )
-
-
-def _linha_seguido(jogo):
-    historico = jogo.get("itad")
-    detalhe = ""
-    if historico:
-        url = historico.get("url_itad") or itad.URL_FONTE
-        detalhe = (
-            f'<br><span style="color:#666;font-size:13px">Menor preço da história: '
-            f'{_reais(historico["menor_preco"])} na {html.escape(historico["loja_menor"])}'
-            f' · <a href="{html.escape(url)}" style="color:#666">histórico</a></span>'
+def _preco_html(evento):
+    if evento["tipo"] not in TIPOS_DE_PRECO or not evento.get("preco"):
+        return ""
+    partes = []
+    if evento.get("desconto"):
+        partes.append(
+            f'<span style="background:{VERDE};color:#fff;font-weight:700;font-size:12px;'
+            f'padding:2px 6px;border-radius:4px">-{evento["desconto"]}%</span> '
         )
-    desconto = f' <b style="color:#059669">-{jogo["desconto"]}%</b>' if jogo.get("desconto") else ""
+    if evento.get("preco_cheio") and evento.get("desconto"):
+        partes.append(f'<span style="color:#888;text-decoration:line-through;font-size:13px">'
+                      f'{html.escape(evento["preco_cheio"])}</span> ')
+    partes.append(f'<b style="font-size:15px">{html.escape(evento["preco"])}</b>')
+    return f'<div style="margin:6px 0 2px">{"".join(partes)}</div>'
+
+
+def _cartao(evento, urgente=False):
+    rotulo, cor = boletim_html.ROTULOS.get(evento["tipo"], ("Novidade", "#64748b"))
+    fundo = "#ffffff"
+    borda = LARANJA if urgente else cor
     return (
-        f'<li style="margin:0 0 10px"><a href="{html.escape(jogo["url"])}" '
-        f'style="color:#1a1a1a;font-weight:600">{html.escape(jogo["nome"])}</a>'
-        f' — {html.escape(jogo["preco"] or "")}{desconto}{detalhe}</li>'
+        f'<div style="background:{fundo};border:1px solid #e5e7eb;border-left:4px solid {borda};'
+        f'border-radius:8px;padding:12px 14px;margin:0 0 10px">'
+        f'<span style="background:{cor};color:#fff;font-size:11px;font-weight:700;'
+        f'letter-spacing:.4px;text-transform:uppercase;padding:2px 8px;border-radius:99px">'
+        f'{html.escape(rotulo)}</span>'
+        f'<div style="font-size:17px;font-weight:700;margin:8px 0 0">'
+        f'<a href="{html.escape(evento["url"])}" style="color:#111;text-decoration:none">'
+        f'{html.escape(evento["nome"])}</a></div>'
+        f'{_preco_html(evento)}'
+        f'<div style="color:#555;font-size:13px;margin-top:4px">{html.escape(destaque(evento))}</div>'
+        f"</div>"
     )
 
 
-def montar_email(perfil, selecao, textos, edicao):
-    data = datetime.fromisoformat(edicao["publicada_em"]).strftime("%d/%m/%Y")
+def _secao(titulo, conteudo, cor="#6b7280", fundo=None):
+    caixa = (f"background:{fundo};border-radius:10px;padding:12px 12px 2px;margin:0 0 16px"
+             if fundo else "margin:0 0 16px")
+    return (
+        f'<div style="{caixa}">'
+        f'<div style="color:{cor};font-size:12px;font-weight:800;letter-spacing:.8px;'
+        f'text-transform:uppercase;margin:0 0 8px">{titulo}</div>{conteudo}</div>'
+    )
+
+
+def montar_email(perfil, selecao, mensagem, edicao):
+    data = datetime.fromisoformat(edicao["publicada_em"]).strftime("%d/%m")
+    inscrito = datetime.fromisoformat(perfil["consentimento"]).strftime("%d/%m/%Y")
     partes = [
-        f'<div style="{ESTILO_EMAIL}">',
-        '<p style="font-size:13px;color:#666;margin:0">Radar VR · ' + data + "</p>",
-        f'<h1 style="font-size:22px;margin:4px 0 16px">Olá, {html.escape(perfil["nome"])}</h1>',
-        f'<p>{html.escape(textos["abertura"])}</p>',
+        f'<div style="font-family:{FONTE_EMAIL};color:#111;line-height:1.45;'
+        f'max-width:560px;margin:0 auto;padding:20px 16px">',
+        f'<div style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:{LARANJA}">'
+        f'RADAR VR <span style="color:#9ca3af;font-weight:400;letter-spacing:0">· {data}</span></div>',
+        f'<div style="font-size:22px;font-weight:800;margin:6px 0 2px">Olá, {html.escape(perfil["nome"])}</div>',
+        f'<div style="color:#555;margin:0 0 18px">{html.escape(mensagem["abertura"])}</div>',
     ]
     if selecao["urgentes"]:
-        partes.append(
-            '<div style="background:#fff4e5;border-left:4px solid #ea580c;'
-            'padding:10px 14px;margin:16px 0">'
-            "<b>Atenção hoje</b><ul style='padding-left:18px;margin:8px 0 0'>"
-            + "".join(_linha_item(e) for e in selecao["urgentes"])
-            + "</ul></div>"
-        )
-    demais = [e for e in selecao["itens"] if e not in selecao["urgentes"]]
-    if demais:
-        partes.append('<h2 style="font-size:16px;margin:20px 0 8px">Movimentos que combinam com você</h2>')
-        partes.append("<ul style='padding-left:18px'>"
-                      + "".join(_linha_item(e) for e in demais[:8]) + "</ul>")
-    if selecao["seguidos"]:
-        partes.append('<h2 style="font-size:16px;margin:20px 0 8px">Seus jogos</h2>')
-        partes.append("<ul style='padding-left:18px'>"
-                      + "".join(_linha_seguido(j) for j in selecao["seguidos"]) + "</ul>")
+        partes.append(_secao(
+            "Atenção hoje",
+            "".join(_cartao(e, urgente=True) for e in selecao["urgentes"]),
+            cor=LARANJA, fundo=LARANJA_CLARO,
+        ))
+    if selecao["itens"]:
+        partes.append(_secao(
+            "Novidades nos seus jogos",
+            "".join(_cartao(e) for e in selecao["itens"][:MAX_ITENS_EMAIL]),
+        ))
     if edicao.get("audio"):
-        partes.append("<p>A narração completa da edição está em anexo.</p>")
+        partes.append('<div style="color:#555;font-size:13px">Narração da edição em anexo.</div>')
     partes.append(
-        '<hr style="border:none;border-top:1px solid #ddd;margin:24px 0 12px">'
-        '<p style="font-size:12px;color:#777">'
-        f'Histórico de preços: <a href="{itad.URL_FONTE}" style="color:#777">{itad.FONTE}</a>. '
-        "Preços, jogadores e anúncios: Steam.<br>"
-        f"Você recebe este boletim porque se inscreveu em {html.escape(perfil['consentimento'])}. "
-        "Para sair, responda este e-mail com SAIR.</p></div>"
+        '<div style="border-top:1px solid #e5e7eb;margin:18px 0 0;padding-top:10px;'
+        'color:#9ca3af;font-size:11px">'
+        f'Preço histórico: <a href="{itad.URL_FONTE}" style="color:#9ca3af">{itad.FONTE}</a> · '
+        f"dados da Steam · inscrito em {inscrito} · responda SAIR para cancelar</div></div>"
     )
     return "".join(partes)
 
 
-def montar_alerta(perfil, textos, assunto_email):
-    return (
-        f"<b>Radar VR · {html.escape(perfil['nome'])}</b>\n{html.escape(textos['alerta'])}\n\n"
-        f"Boletim completo no seu e-mail: <i>{html.escape(assunto_email)}</i>"
-    )
+# ---------------------------------------------------------------- alerta
+
+def _linha_alerta(evento):
+    icone = ICONES.get(evento["tipo"], "•")
+    titulo = f'{icone} <a href="{html.escape(evento["url"])}"><b>{html.escape(evento["nome"])}</b></a>'
+    if evento.get("desconto"):
+        titulo += f"  −{evento['desconto']}%"
+    preco = ""
+    if evento.get("preco"):
+        cheio = evento.get("preco_cheio") if evento.get("desconto") else ""
+        preco = (f"<s>{html.escape(cheio)}</s> " if cheio else "") + f"<b>{html.escape(evento['preco'])}</b> · "
+    resumo = destaque(evento).split(" · ")[0]  # no chat, so o essencial; a data fica no e-mail
+    return f"{titulo}\n{preco}{resumo[:1].lower() + resumo[1:]}"
+
+
+def montar_alerta(selecao):
+    return "\n\n".join(_linha_alerta(e) for e in selecao["urgentes"][:MAX_ITENS_ALERTA])
+
+
+def montar_complemento(selecao):
+    """Demais novidades em uma linha cada, para quando o e-mail nao chega."""
+    if not selecao["itens"]:
+        return ""
+    linhas = []
+    for evento in selecao["itens"][:MAX_ITENS_EMAIL]:
+        fato = destaque(evento).split(" · ")[0]
+        linhas.append(f'• <a href="{html.escape(evento["url"])}">{html.escape(evento["nome"])}</a>: '
+                      f'{html.escape(fato[:1].lower() + fato[1:])}')
+    return "Também hoje:\n" + "\n".join(linhas)
 
 
 # ------------------------------------------------------------ orquestracao
@@ -338,36 +292,36 @@ def montar_alerta(perfil, textos, assunto_email):
 def _envelope(perfil, edicao):
     inicio = time.perf_counter()
     selecao = selecionar(perfil, edicao)
-    relevante = selecao["itens"] or any(j.get("desconto") for j in selecao["seguidos"])
 
     envelope = {
         "edicao_id": edicao["id"],
         "perfil_id": perfil["id"],
-        "itens": len(selecao["itens"]),
+        "itens": len(selecao["itens"]) + len(selecao["urgentes"]),
         "urgentes": len(selecao["urgentes"]),
         "email": None,
         "instantaneo": None,
     }
-    if not relevante:
-        envelope["motivo"] = "sem movimento nos interesses do assinante"
-        envelope["origem_texto"] = "-"
+    if not envelope["itens"]:
+        envelope["motivo"] = "sem novidade nos interesses do assinante"
         envelope["latencia_ms"] = round((time.perf_counter() - inicio) * 1000)
         return envelope
 
-    textos, origem = redigir(perfil, selecao)
-    envelope["origem_texto"] = origem
+    mensagem = textos(selecao)
     envelope["email"] = {
         "para": perfil["email"],
-        "assunto": textos["assunto"],
-        "html": montar_email(perfil, selecao, textos, edicao),
+        "assunto": mensagem["assunto"],
+        "html": montar_email(perfil, selecao, mensagem, edicao),
         "anexo": edicao.get("audio") or "",
     }
     canal = perfil.get("instantaneo") or {}
-    if selecao["urgentes"] and canal.get("canal") and textos.get("alerta"):
+    if selecao["urgentes"] and canal.get("canal"):
         envelope["instantaneo"] = {
             "canal": canal["canal"],
             "destino": canal["destino"],
-            "texto": montar_alerta(perfil, textos, textos["assunto"]),
+            "texto": montar_alerta(selecao),
+            # So entra se o e-mail falhar: o alerta passa a carregar o resto
+            # do dia, que de outro modo se perderia.
+            "complemento": montar_complemento(selecao),
         }
         envelope["motivo"] = "urgência: alerta instantâneo e boletim por e-mail"
     else:
@@ -376,18 +330,5 @@ def _envelope(perfil, edicao):
     return envelope
 
 
-def personalizar(edicao, perfis, paralelo=None):
-    paralelo = paralelo or config.PERSONALIZACAO_PARALELA
-    with ThreadPoolExecutor(max_workers=paralelo) as executor:
-        return list(executor.map(lambda p: _envelope(p, edicao), perfis))
-
-
-def metricas():
-    return dict(_metricas, entradas_cache=len(_cache))
-
-
-def limpar_cache():
-    with _cache_trava:
-        _cache.clear()
-    for chave in _metricas:
-        _metricas[chave] = 0
+def personalizar(edicao, perfis):
+    return [_envelope(perfil, edicao) for perfil in perfis]

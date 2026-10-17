@@ -98,6 +98,8 @@ OLLAMA_URL = _env("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODELO = "llama3.1:8b"
 OLLAMA_TEMP = 0.2  # classificacao exige consistencia entre execucoes
 OLLAMA_TIMEOUT = 180
+# Depois de uma recusa de conexao, o Ollama nao e chamado por este tempo.
+PAUSA_DISJUNTOR_S = int(_env("RADAR_DISJUNTOR_S", "60"))
 
 # ------------------------------------------------------------ sintese TTS
 KOKORO_MODELO = DIR_MODELOS / "kokoro-v1.0.onnx"
@@ -131,8 +133,6 @@ DRY_RUN = _env_bool("RADAR_DRY_RUN")
 FALHAR_CANAIS = {c.strip() for c in _env("RADAR_FALHAR_CANAIS").split(",") if c.strip()}
 
 COLETA_PARALELA = int(_env("RADAR_COLETA_PARALELA", "4"))
-PERSONALIZACAO_PARALELA = int(_env("RADAR_PERSONALIZACAO_PARALELA", "4"))
-CACHE_REDACAO = _env_bool("RADAR_CACHE_REDACAO", True)
 
 # --------------------------------------------------------------- canais
 GMAIL_USER = _env("GMAIL_USER")

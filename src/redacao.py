@@ -49,8 +49,7 @@ FATO: {resumo}
 
 
 # Disjuntor: se o Ollama recusa conexao, as chamadas seguintes falham na hora
-# durante PAUSA_DISJUNTOR_S em vez de esperar o timeout de TCP uma a uma.
-PAUSA_DISJUNTOR_S = 60
+# durante config.PAUSA_DISJUNTOR_S em vez de esperar o timeout de TCP uma a uma.
 _fora_do_ar_ate = 0.0
 
 
@@ -61,7 +60,7 @@ def chamar(prompt, sistema=SISTEMA):
     try:
         return _chamar(prompt, sistema)
     except requests.ConnectionError:
-        _fora_do_ar_ate = time.monotonic() + PAUSA_DISJUNTOR_S
+        _fora_do_ar_ate = time.monotonic() + config.PAUSA_DISJUNTOR_S
         raise
 
 
@@ -125,14 +124,14 @@ def redigir(eventos):
     log.info("=== ETAPA 3/4 | Redação com LLM local (%s) ===", config.OLLAMA_MODELO)
 
     precisam_llm = [e for e in eventos if e["tipo"] in TIPOS_REDIGIDOS]
-    if precisam_llm and verificar_servico() is None:
-        raise RuntimeError(
-            f"Ollama não respondeu. Execute 'ollama serve' e "
-            f"'ollama pull {config.OLLAMA_MODELO}'."
-        )
+    # Sem o modelo a edicao segue: o resumo factual vira a chamada. Perde-se
+    # a sintese do anuncio, nao o boletim.
+    llm_ativo = bool(precisam_llm) and verificar_servico() is not None
+    if precisam_llm and not llm_ativo:
+        log.warning("Ollama indisponível: chamadas pela regra. Execute 'ollama serve'.")
 
     for evento in eventos:
-        if evento["tipo"] not in TIPOS_REDIGIDOS:
+        if evento["tipo"] not in TIPOS_REDIGIDOS or not llm_ativo:
             evento["linha"] = f"{evento['nome']} {evento['resumo']}"
             origem = "regra"
         else:
@@ -147,8 +146,9 @@ def redigir(eventos):
                 origem = "regra"
         log.info("  %-18s [%s] %s", evento["tipo"][:18], origem, evento["linha"][:52])
 
+    pelo_llm = len(precisam_llm) if llm_ativo else 0
     log.info(
         "Etapa 3 concluída: %d linhas (%d do LLM, %d por regra)",
-        len(eventos), len(precisam_llm), len(eventos) - len(precisam_llm),
+        len(eventos), pelo_llm, len(eventos) - pelo_llm,
     )
     return eventos

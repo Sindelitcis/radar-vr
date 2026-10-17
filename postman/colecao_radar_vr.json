@@ -247,22 +247,6 @@
               }
             }
           }
-        },
-        {
-          "name": "8. Métricas da personalização",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{servico}}/metricas",
-              "host": [
-                "{{servico}}"
-              ],
-              "path": [
-                "metricas"
-              ]
-            }
-          }
         }
       ]
     },
