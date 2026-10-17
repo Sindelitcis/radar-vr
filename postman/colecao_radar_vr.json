@@ -2,17 +2,270 @@
   "info": {
     "_postman_id": "radar-vr-pucpr-etapa1-0001",
     "name": "Radar VR",
-    "description": "Rotas consumidas pelo pipeline. Steam Web API sem autenticação e Ollama local. Importável no Postman e no Insomnia.",
+    "description": "Rotas do microsserviço Radar VR, consumidas pelo n8n, e as rotas externas que ele usa: Steam, IsThereAnyDeal e Ollama. Importável no Postman e no Insomnia.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "loja", "value": "https://store.steampowered.com", "type": "string" },
-    { "key": "api", "value": "https://api.steampowered.com", "type": "string" },
-    { "key": "ollama", "value": "http://127.0.0.1:11434", "type": "string" },
-    { "key": "appid", "value": "546560", "type": "string" },
-    { "key": "modelo", "value": "llama3.1:8b", "type": "string" }
+    {
+      "key": "loja",
+      "value": "https://store.steampowered.com",
+      "type": "string"
+    },
+    {
+      "key": "api",
+      "value": "https://api.steampowered.com",
+      "type": "string"
+    },
+    {
+      "key": "ollama",
+      "value": "http://127.0.0.1:11434",
+      "type": "string"
+    },
+    {
+      "key": "appid",
+      "value": "546560",
+      "type": "string"
+    },
+    {
+      "key": "modelo",
+      "value": "llama3.1:8b",
+      "type": "string"
+    },
+    {
+      "key": "servico",
+      "value": "http://127.0.0.1:8765",
+      "type": "string"
+    },
+    {
+      "key": "itad_key",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
+    {
+      "name": "Microsserviço",
+      "item": [
+        {
+          "name": "1. Saúde",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{servico}}/saude",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "saude"
+              ]
+            },
+            "description": "Ollama, ITAD, canais configurados e modo DRY_RUN."
+          }
+        },
+        {
+          "name": "2. Gerar edição",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{servico}}/edicao",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "edicao"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Coleta, histórico de preços, eventos, redação e voz."
+          }
+        },
+        {
+          "name": "3. Reaproveitar edição atual",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{servico}}/edicao",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "edicao"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reaproveitar\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "4. Personalizar por assinante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{servico}}/personalizar",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "personalizar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Um envelope por assinante com novidade relevante."
+          }
+        },
+        {
+          "name": "5. Enviar boletim por e-mail",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{servico}}/enviar/email",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "enviar",
+                "email"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"edicao_id\": \"2026-10-17T08-14-29\",\n  \"perfil_id\": \"ana\",\n  \"para\": \"ana@exemplo.com\",\n  \"assunto\": \"Radar VR: teste\",\n  \"html\": \"<p>teste</p>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Use com o serviço em DRY_RUN (executar_servico.cmd teste)."
+          }
+        },
+        {
+          "name": "6. Enviar alerta instantâneo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{servico}}/enviar/instantaneo",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "enviar",
+                "instantaneo"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"edicao_id\": \"2026-10-17T08-14-29\",\n  \"perfil_id\": \"ana\",\n  \"canal\": \"telegram\",\n  \"destino\": \"123456789\",\n  \"texto\": \"<b>Radar VR</b> teste\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "7. Registrar falha",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{servico}}/falha",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "falha"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"no\": \"Enviar boletim por e-mail\",\n  \"mensagem\": \"teste de alerta ao operador\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "8. Métricas da personalização",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{servico}}/metricas",
+              "host": [
+                "{{servico}}"
+              ],
+              "path": [
+                "metricas"
+              ]
+            }
+          }
+        }
+      ]
+    },
     {
       "name": "Steam",
       "item": [
@@ -20,19 +273,53 @@
           "name": "1. Catálogo VR ordenado por avaliações",
           "request": {
             "method": "GET",
-            "header": [{ "key": "User-Agent", "value": "RadarVR/1.0" }],
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "RadarVR/1.0"
+              }
+            ],
             "url": {
               "raw": "{{loja}}/search/results/?query=&category1=998&vrsupport=401&sort_by=Reviews_DESC&cc=br&l=portuguese&json=1",
-              "host": ["{{loja}}"],
-              "path": ["search", "results", ""],
+              "host": [
+                "{{loja}}"
+              ],
+              "path": [
+                "search",
+                "results",
+                ""
+              ],
               "query": [
-                { "key": "query", "value": "" },
-                { "key": "category1", "value": "998", "description": "jogos" },
-                { "key": "vrsupport", "value": "401", "description": "suporte a VR" },
-                { "key": "sort_by", "value": "Reviews_DESC" },
-                { "key": "cc", "value": "br" },
-                { "key": "l", "value": "portuguese" },
-                { "key": "json", "value": "1" }
+                {
+                  "key": "query",
+                  "value": ""
+                },
+                {
+                  "key": "category1",
+                  "value": "998",
+                  "description": "jogos"
+                },
+                {
+                  "key": "vrsupport",
+                  "value": "401",
+                  "description": "suporte a VR"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "Reviews_DESC"
+                },
+                {
+                  "key": "cc",
+                  "value": "br"
+                },
+                {
+                  "key": "l",
+                  "value": "portuguese"
+                },
+                {
+                  "key": "json",
+                  "value": "1"
+                }
               ]
             },
             "description": "Monta a watchlist. O appid não vem em campo próprio: é extraído da URL da imagem, no padrão /apps/NNNN/. Acrescentar infinite=1 expõe total_count."
@@ -42,15 +329,34 @@
           "name": "2. Ficha do jogo",
           "request": {
             "method": "GET",
-            "header": [{ "key": "User-Agent", "value": "RadarVR/1.0" }],
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "RadarVR/1.0"
+              }
+            ],
             "url": {
               "raw": "{{loja}}/api/appdetails?appids={{appid}}&cc=br&l=portuguese",
-              "host": ["{{loja}}"],
-              "path": ["api", "appdetails"],
+              "host": [
+                "{{loja}}"
+              ],
+              "path": [
+                "api",
+                "appdetails"
+              ],
               "query": [
-                { "key": "appids", "value": "{{appid}}" },
-                { "key": "cc", "value": "br" },
-                { "key": "l", "value": "portuguese" }
+                {
+                  "key": "appids",
+                  "value": "{{appid}}"
+                },
+                {
+                  "key": "cc",
+                  "value": "br"
+                },
+                {
+                  "key": "l",
+                  "value": "portuguese"
+                }
               ]
             },
             "description": "price_overview traz final_formatted, initial_formatted e discount_percent — a base do preço exibido na página do boletim."
@@ -63,9 +369,21 @@
             "header": [],
             "url": {
               "raw": "{{api}}/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid={{appid}}",
-              "host": ["{{api}}"],
-              "path": ["ISteamUserStats", "GetNumberOfCurrentPlayers", "v1", ""],
-              "query": [{ "key": "appid", "value": "{{appid}}" }]
+              "host": [
+                "{{api}}"
+              ],
+              "path": [
+                "ISteamUserStats",
+                "GetNumberOfCurrentPlayers",
+                "v1",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "appid",
+                  "value": "{{appid}}"
+                }
+              ]
             },
             "description": "Leitura instantânea. A variação só existe comparando com o snapshot da edição anterior."
           }
@@ -77,13 +395,31 @@
             "header": [],
             "url": {
               "raw": "{{loja}}/appreviews/{{appid}}?json=1&language=all&purchase_type=all&num_per_page=0",
-              "host": ["{{loja}}"],
-              "path": ["appreviews", "{{appid}}"],
+              "host": [
+                "{{loja}}"
+              ],
+              "path": [
+                "appreviews",
+                "{{appid}}"
+              ],
               "query": [
-                { "key": "json", "value": "1" },
-                { "key": "language", "value": "all" },
-                { "key": "purchase_type", "value": "all" },
-                { "key": "num_per_page", "value": "0", "description": "só o resumo" }
+                {
+                  "key": "json",
+                  "value": "1"
+                },
+                {
+                  "key": "language",
+                  "value": "all"
+                },
+                {
+                  "key": "purchase_type",
+                  "value": "all"
+                },
+                {
+                  "key": "num_per_page",
+                  "value": "0",
+                  "description": "só o resumo"
+                }
               ]
             },
             "description": "query_summary traz total_positive, total_reviews e review_score_desc."
@@ -96,15 +432,108 @@
             "header": [],
             "url": {
               "raw": "{{api}}/ISteamNews/GetNewsForApp/v2/?appid={{appid}}&count=9&maxlength=400",
-              "host": ["{{api}}"],
-              "path": ["ISteamNews", "GetNewsForApp", "v2", ""],
+              "host": [
+                "{{api}}"
+              ],
+              "path": [
+                "ISteamNews",
+                "GetNewsForApp",
+                "v2",
+                ""
+              ],
               "query": [
-                { "key": "appid", "value": "{{appid}}" },
-                { "key": "count", "value": "9" },
-                { "key": "maxlength", "value": "400" }
+                {
+                  "key": "appid",
+                  "value": "{{appid}}"
+                },
+                {
+                  "key": "count",
+                  "value": "9"
+                },
+                {
+                  "key": "maxlength",
+                  "value": "400"
+                }
               ]
             },
             "description": "feed_type 1 identifica publicação do desenvolvedor; os demais feeds são matérias de imprensa. O campo gid alimenta a memória de publicação."
+          }
+        }
+      ]
+    },
+    {
+      "name": "IsThereAnyDeal",
+      "item": [
+        {
+          "name": "1. appid da Steam para id do ITAD (lote)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\"app/{{appid}}\"]"
+            },
+            "url": {
+              "raw": "https://api.isthereanydeal.com/lookup/id/shop/61/v1?key={{itad_key}}",
+              "host": [
+                "https://api.isthereanydeal.com"
+              ],
+              "path": [
+                "lookup",
+                "id",
+                "shop",
+                "61",
+                "v1"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{itad_key}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Preço atual e menor histórico (lote)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\"018d937f-3ac1-7228-87f4-1233cb94b630\"]"
+            },
+            "url": {
+              "raw": "https://api.isthereanydeal.com/games/overview/v2?key={{itad_key}}&country=BR",
+              "host": [
+                "https://api.isthereanydeal.com"
+              ],
+              "path": [
+                "games",
+                "overview",
+                "v2"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{itad_key}}"
+                },
+                {
+                  "key": "country",
+                  "value": "BR"
+                }
+              ]
+            }
           }
         }
       ]
@@ -119,8 +548,13 @@
             "header": [],
             "url": {
               "raw": "{{ollama}}/api/tags",
-              "host": ["{{ollama}}"],
-              "path": ["api", "tags"]
+              "host": [
+                "{{ollama}}"
+              ],
+              "path": [
+                "api",
+                "tags"
+              ]
             },
             "description": "Verificação de disponibilidade. Use 127.0.0.1: clientes em Node resolvem localhost como ::1 e o Ollama escuta apenas em IPv4."
           }
@@ -129,15 +563,25 @@
           "name": "7. Redigir uma chamada",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"model\": \"{{modelo}}\",\n  \"stream\": false,\n  \"format\": \"json\",\n  \"options\": { \"temperature\": 0.2 },\n  \"system\": \"Voce e redator de um boletim diario de audio sobre jogos de realidade virtual na Steam, em portugues do Brasil. Escreve para ser OUVIDO: frases curtas, diretas, sem adjetivo de propaganda. Todos os numeros ja vem prontos no material recebido; voce nunca inventa, estima ou altera um numero.\",\n  \"prompt\": \"Escreva UMA frase de noticia de radio sobre o fato abaixo. Responda APENAS com JSON valido: {\\\"linha\\\": \\\"a frase, no maximo 28 palavras\\\"}. Regras: comece pelo nome do jogo; escreva com acentuacao correta; nao escreva numero de versao nem data; nao opine sobre valer a pena. JOGO: Half-Life: Alyx | FATO: recebeu um anuncio do desenvolvedor ontem: Steam Frame Update\"\n}"
             },
             "url": {
               "raw": "{{ollama}}/api/generate",
-              "host": ["{{ollama}}"],
-              "path": ["api", "generate"]
+              "host": [
+                "{{ollama}}"
+              ],
+              "path": [
+                "api",
+                "generate"
+              ]
             },
             "description": "Chamada equivalente à de src/redacao.py. O modelo redige apenas eventos com texto livre; fatos numéricos vêm de regra determinística."
           }

@@ -1,0 +1,418 @@
+{
+  "id": "radarVRetapa2001",
+  "name": "Radar VR - Boletim personalizado",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "8b59bf49-1e08-5a13-ac5e-57a9ee7a7eb2",
+      "name": "Executar manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "86abb345-0fd2-5716-bf46-78cc8f2b61c6",
+      "name": "Agendamento diário 09h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/edicao",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reaproveitar: $env.RADAR_REAPROVEITAR_EDICAO === '1' }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "80b74bbc-31bc-5169-9432-b152c80f38ec",
+      "name": "Gerar edição",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput",
+      "notes": "Coleta na Steam, histórico de preços no ITAD, detecção de eventos, redação e narração."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/personalizar",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "b227f4a2-e3f9-5c7a-a37a-86e26f281965",
+      "name": "Personalizar por assinante",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput",
+      "notes": "Um item por assinante com novidade relevante: e-mail sempre, alerta instantâneo só com urgência."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/enviar/email",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ edicao_id: $json.edicao_id, perfil_id: $json.perfil_id, ...$json.email }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "093622b0-60a3-5c9e-ac78-81ac2156f771",
+      "name": "Enviar boletim por e-mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!$('Personalizar por assinante').item.json.instantaneo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bbe5c2bc-d0ec-5e11-867f-dea0f1ddd74e",
+      "name": "Tem alerta urgente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/enviar/instantaneo",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ edicao_id: $('Personalizar por assinante').item.json.edicao_id, perfil_id: $('Personalizar por assinante').item.json.perfil_id, ...$('Personalizar por assinante').item.json.instantaneo, email_status: $('Enviar boletim por e-mail').item.json.status }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "dbfabe39-4c50-5d3c-bd72-f063797100ac",
+      "name": "Enviar alerta instantâneo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/enviar/email",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ edicao_id: $('Personalizar por assinante').item.json.edicao_id, perfil_id: $('Personalizar por assinante').item.json.perfil_id, contingencia: true, para: $('Personalizar por assinante').item.json.email.para, assunto: 'Alerta urgente: ' + $('Personalizar por assinante').item.json.email.assunto, html: '<p>' + $('Personalizar por assinante').item.json.instantaneo.texto.split(String.fromCharCode(10)).join('<br>') + '</p>' }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "f7fbcfcb-188b-51af-8d76-9701c3f74dcc",
+      "name": "Contingência: alerta por e-mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        200
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "notes": "Se o canal instantâneo falhar, o alerta segue por e-mail."
+    },
+    {
+      "parameters": {
+        "jsCode": "const falha = {\n  ts: new Date().toISOString(),\n  fluxo: $workflow.name,\n  execucao: $execution.id,\n  mensagem: $json.error?.message || 'microsserviço sem resposta',\n};\nreturn [{ json: { ...falha, linha: JSON.stringify(falha) + '\\n' } }];"
+      },
+      "id": "98efc5cc-6c21-5ccb-9558-0e58dfa85d0b",
+      "name": "Descrever indisponibilidade",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "linha",
+        "options": {
+          "fileName": "n8n_falhas.log"
+        }
+      },
+      "id": "c4a457ed-4a04-5ad3-b0a3-6832c60b1812",
+      "name": "Converter falha em texto",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $env.RADAR_DIR_LOGS }}/n8n_falhas.log",
+        "options": {
+          "append": true
+        }
+      },
+      "id": "237523ee-4eb8-5994-9de6-7b492ae818a1",
+      "name": "Gravar falha em log local",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        960,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ 'Radar VR indisponível: ' + $('Descrever indisponibilidade').item.json.mensagem }}"
+      },
+      "id": "8f650c63-4bab-5ae4-b4f4-b423f31ead06",
+      "name": "Interromper execução",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/falha",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ no: 'Enviar boletim por e-mail', perfil_id: $('Personalizar por assinante').item.json.perfil_id, edicao_id: $('Personalizar por assinante').item.json.edicao_id, mensagem: $json.error?.message || 'falha no envio' }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "bd35c6e0-51fe-543e-a0aa-68bb8813b878",
+      "name": "Registrar falha do e-mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Executar manualmente": {
+      "main": [
+        [
+          {
+            "node": "Gerar edição",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agendamento diário 09h": {
+      "main": [
+        [
+          {
+            "node": "Gerar edição",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar edição": {
+      "main": [
+        [
+          {
+            "node": "Personalizar por assinante",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descrever indisponibilidade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalizar por assinante": {
+      "main": [
+        [
+          {
+            "node": "Enviar boletim por e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descrever indisponibilidade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descrever indisponibilidade": {
+      "main": [
+        [
+          {
+            "node": "Converter falha em texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converter falha em texto": {
+      "main": [
+        [
+          {
+            "node": "Gravar falha em log local",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gravar falha em log local": {
+      "main": [
+        [
+          {
+            "node": "Interromper execução",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar boletim por e-mail": {
+      "main": [
+        [
+          {
+            "node": "Tem alerta urgente?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar falha do e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem alerta urgente?": {
+      "main": [
+        [
+          {
+            "node": "Enviar alerta instantâneo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Enviar alerta instantâneo": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Contingência: alerta por e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "radarVRfalhas001"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "radar-vr-pucpr"
+  },
+  "tags": []
+}

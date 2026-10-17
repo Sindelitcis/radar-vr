@@ -1,0 +1,139 @@
+{
+  "id": "radarVRfalhas001",
+  "name": "Radar VR - Tratamento de falhas",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "135ac169-1851-529e-852b-18dda682271c",
+      "name": "Falha em qualquer execução",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $json.execution || {};\nconst falha = {\n  ts: new Date().toISOString(),\n  fluxo: $json.workflow?.name,\n  no: e.lastNodeExecuted,\n  mensagem: e.error?.message,\n  execucao: e.id,\n};\nreturn [{ json: { ...falha, linha: JSON.stringify(falha) + '\\n' } }];"
+      },
+      "id": "15abed1d-885c-533d-934e-982bd67ef9d8",
+      "name": "Descrever falha",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RADAR_SERVICO_URL }}/falha",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fluxo: $json.fluxo, no: $json.no, mensagem: $json.mensagem, execucao: $json.execucao }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "e96c802e-2d5b-5c9c-a300-fb72bcec8738",
+      "name": "Avisar operador",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        200
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "notes": "Registra na auditoria do serviço e envia e-mail ao operador."
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "linha",
+        "options": {
+          "fileName": "n8n_falhas.log"
+        }
+      },
+      "id": "d1cc01d1-cb25-5b3b-9985-e70bca44a0cb",
+      "name": "Converter em texto",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $env.RADAR_DIR_LOGS }}/n8n_falhas.log",
+        "options": {
+          "append": true
+        }
+      },
+      "id": "72069006-7137-5029-9b7d-8fa422d22c97",
+      "name": "Gravar em logs/n8n_falhas.log",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        720,
+        420
+      ],
+      "notes": "Registro local: funciona mesmo com o microsserviço fora do ar."
+    }
+  ],
+  "connections": {
+    "Falha em qualquer execução": {
+      "main": [
+        [
+          {
+            "node": "Descrever falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descrever falha": {
+      "main": [
+        [
+          {
+            "node": "Avisar operador",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Converter em texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converter em texto": {
+      "main": [
+        [
+          {
+            "node": "Gravar em logs/n8n_falhas.log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "radar-vr-pucpr"
+  },
+  "tags": []
+}
