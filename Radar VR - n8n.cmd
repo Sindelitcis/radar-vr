@@ -8,8 +8,7 @@ echo   [E] Ensaio
 echo   [R] Real
 echo.
 choice /c ER /n /m "  Escolha E ou R: "
-set MODO=teste
-if errorlevel 2 set MODO=
+if errorlevel 2 (set MODO=) else (set MODO=teste)
 
 curl -s -o nul http://127.0.0.1:8765/saude
 if errorlevel 1 (
