@@ -148,9 +148,7 @@ def montar_roteiro(eventos, titulos_observados, primeira_edicao):
             "jogadores com hoje."
         )
 
-    # A despedida que manda correr atrás da oferta só cabe quando existe
-    # oferta em curso. O teste é por tipo, não por seção: promoção encerrada
-    # também vive em "promoções", e convidar a aproveitá-la seria contraditório.
+    # Por tipo, não por seção: promoção encerrada também fica em "promoções".
     tem_oferta = any(e["tipo"] in TIPOS_COM_OFERTA_ATIVA for e in eventos)
     partes.append(
         random.choice(DESPEDIDAS_COM_PROMOCAO if tem_oferta else DESPEDIDAS)

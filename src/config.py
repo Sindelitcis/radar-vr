@@ -86,11 +86,8 @@ ONDA_REVIEWS_MINIMA = 40       # avaliacoes novas entre edicoes
 # preco atual e o minimo por definicao, o que tornaria a afirmacao vazia.
 EDICOES_PARA_MINIMA_HISTORICA = 5
 
-# Retencao da memoria de anuncios publicados. Derivada da janela de deteccao:
-# um anuncio mais antigo que NOTICIA_RECENTE_DIAS ja e descartado por idade,
-# entao guardar seu identificador alem disso nao altera resultado. O dobro
-# cobre periodos sem execucao. A tabela fica limitada a
-# (titulos observados x anuncios na janela), sem crescer com o tempo.
+# Anuncios mais antigos que a janela de deteccao ja sao descartados por idade;
+# o dobro cobre dias sem execucao.
 RETENCAO_NOTICIAS_DIAS = NOTICIA_RECENTE_DIAS * 2
 
 # ------------------------------------------------------------- LLM local
@@ -129,13 +126,10 @@ ARQ_PERFIS = RAIZ / _env("RADAR_PERFIS", "perfis.json")
 # como simulado. Os testes de carga dependem disso.
 DRY_RUN = _env_bool("RADAR_DRY_RUN")
 
-# Com o historico fixo a edicao compara sempre com a mesma leitura e nao grava
-# outra: as mesmas novidades se repetem a cada execucao, o que serve para
-# ensaiar com envio real. O ensaio (DRY_RUN) ja implica historico fixo.
+# Edicao sem gravar no historico: as mesmas novidades se repetem.
 HISTORICO_FIXO = DRY_RUN or _env_bool("RADAR_HISTORICO_FIXO")
 
-# Canais que devem falhar de proposito, para exercitar os desvios de erro em teste.
-# Exemplo: RADAR_FALHAR_CANAIS=telegram
+# Ex.: RADAR_FALHAR_CANAIS=telegram
 FALHAR_CANAIS = {c.strip() for c in _env("RADAR_FALHAR_CANAIS").split(",") if c.strip()}
 
 COLETA_PARALELA = int(_env("RADAR_COLETA_PARALELA", "4"))
@@ -147,7 +141,7 @@ SMTP_HOST = _env("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORTA = int(_env("SMTP_PORTA", "465"))
 
 TELEGRAM_TOKEN = _env("TELEGRAM_TOKEN")
-# Chat do operador: recebe o aviso de falha quando o e-mail nao sai.
+# Aviso de falha ao operador quando o e-mail nao sai
 OPERADOR_TELEGRAM = _env("RADAR_OPERADOR_TELEGRAM")
 
 WHATSAPP_TOKEN = _env("WHATSAPP_TOKEN")

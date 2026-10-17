@@ -337,8 +337,7 @@ def _envelope(perfil, edicao):
             "canal": canal["canal"],
             "destino": canal["destino"],
             "texto": montar_alerta(selecao),
-            # So entra se o e-mail falhar: o alerta passa a carregar o resto
-            # do dia, que de outro modo se perderia.
+            # usado so se o e-mail falhar
             "complemento": montar_complemento(selecao),
         }
         envelope["motivo"] = "urgência: alerta instantâneo e boletim por e-mail"

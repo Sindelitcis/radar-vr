@@ -1,11 +1,11 @@
 @echo off
-REM Abre o microsservico e o n8n, cada um na sua janela, e o editor no navegador.
+REM Abre o microsservico, o n8n e o editor.
 cd /d "%~dp0"
 echo.
-echo   Radar VR - fluxo do n8n
+echo   Radar VR
 echo.
-echo   [E] Ensaio  o fluxo roda inteiro, mas nenhuma mensagem e enviada
-echo   [R] Real    o e-mail e o Telegram chegam de verdade
+echo   [E] Ensaio
+echo   [R] Real
 echo.
 choice /c ER /n /m "  Escolha E ou R: "
 set MODO=teste
@@ -15,7 +15,7 @@ curl -s -o nul http://127.0.0.1:8765/saude
 if errorlevel 1 (
     start "Radar VR - microsservico" cmd /k executar_servico.cmd %MODO%
 ) else (
-    echo   O microsservico ja esta aberto. Para trocar de modo, feche a janela dele e rode de novo.
+    echo   O microsservico ja esta aberto.
 )
 
 curl -s -o nul http://localhost:5678/healthz

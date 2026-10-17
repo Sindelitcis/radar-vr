@@ -110,8 +110,7 @@ def publicar(titulos=None, gerar_audio=True, extras=()):
     passo = marcar("historico_precos", passo)
 
     selecionados, todos = noticias.detectar(conexao, catalogo, anterior)
-    # O ensaio nao altera o historico: senao cada ensaio consumiria as
-    # novidades do dia, e a execucao real nao teria o que enviar.
+    # Senao cada ensaio consumiria as novidades do dia.
     if config.HISTORICO_FIXO:
         log.log(logging.INFO if config.DRY_RUN else logging.DEBUG,
                 "Histórico fixo: leituras e anúncios não são gravados")

@@ -261,9 +261,9 @@ def main():
     servidor = ThreadingHTTPServer((config.SERVICO_HOST, config.SERVICO_PORTA), Manipulador)
     log.info("Radar VR em http://%s:%d", config.SERVICO_HOST, config.SERVICO_PORTA)
     if config.DRY_RUN:
-        log.info("MODO ENSAIO (DRY_RUN): o fluxo roda inteiro, nenhuma mensagem sai da máquina")
+        log.info("Modo ensaio (DRY_RUN)")
     else:
-        log.info("MODO REAL: e-mail e alertas são entregues aos assinantes")
+        log.info("Modo real")
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:
