@@ -104,6 +104,9 @@ def selecionar(perfil, edicao):
             urgentes.append(evento)
         else:
             itens.append(evento)
+    # O jogo em destaque nao reaparece na lista com um fato menor.
+    em_destaque = {e["appid"] for e in urgentes}
+    itens = [e for e in itens if e["appid"] not in em_destaque]
     # O que nao cabe no e-mail fica de fora tambem da contagem e do assunto.
     return {"urgentes": urgentes, "itens": itens[:MAX_ITENS_EMAIL]}
 

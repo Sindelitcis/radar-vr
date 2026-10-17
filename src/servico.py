@@ -175,23 +175,44 @@ def enviar_instantaneo(corpo):
                    com_complemento=texto != corpo["texto"])
 
 
+def _motivo(mensagem):
+    """Extrai o campo `erro` da resposta 502 que o n8n repassa como texto."""
+    inicio, fim = mensagem.find("{"), mensagem.rfind("}")
+    if inicio >= 0:
+        try:
+            erro = json.loads(mensagem[inicio:fim + 1].replace('\\"', '"')).get("erro")
+            if erro:
+                return erro
+        except ValueError:
+            pass
+    return mensagem
+
+
 def registrar_falha(corpo):
     auditoria.registrar("falha_fluxo", **{k: str(v)[:500] for k, v in corpo.items()})
-    log.error("Falha no fluxo n8n: %s em %s", corpo.get("mensagem"), corpo.get("no"))
     no = str(corpo.get("no", "?"))[:60]
+    motivo = _motivo(str(corpo.get("mensagem", "")))[:300]
+    log.error("Falha no fluxo n8n: %s em %s (%s)", motivo, no, corpo.get("perfil_id", "-"))
+
+    # Um aviso por no e por edicao: a mesma falha costuma atingir todos os assinantes.
+    chave = corpo.get("edicao_id") or corpo.get("execucao")
+    if chave and not auditoria.reservar_envio(str(chave), "operador", f"aviso:{no}"):
+        return 200, {"registrado": True, "aviso_operador": "já avisado"}
+
     aviso = canais.enviar_email(
         config.GMAIL_USER,
-        f"[Radar VR] Falha no fluxo: {no}",
-        "<p>O n8n reportou uma falha.</p><pre>"
-        + json.dumps(corpo, ensure_ascii=False, indent=2)[:4000] + "</pre>",
+        f"[Radar VR] Falha em {no}",
+        f"<p>{html.escape(motivo)}</p><pre>"
+        + html.escape(json.dumps(corpo, ensure_ascii=False, indent=2)[:4000]) + "</pre>",
     ) if config.GMAIL_USER else {"status": "falhou", "canal": "email"}
     # Se a falha for do proprio Gmail, o aviso por e-mail tambem nao sai.
     if aviso["status"] == "falhou" and config.OPERADOR_TELEGRAM:
         aviso = canais.enviar_telegram(
             config.OPERADOR_TELEGRAM,
-            f"⚠️ <b>Radar VR</b>: falha em {html.escape(no)}\n"
-            f"{html.escape(str(corpo.get('mensagem', ''))[:300])}",
+            f"⚠️ <b>Radar VR</b>: falha em {html.escape(no)}\n{html.escape(motivo)}",
         )
+    if chave:
+        auditoria.concluir_envio(str(chave), "operador", f"aviso:{no}", aviso["status"])
     log.info("Aviso ao operador: %s por %s", aviso["status"], aviso.get("canal", "-"))
     return 200, {"registrado": True, "aviso_operador": aviso["status"],
                  "canal_aviso": aviso.get("canal")}
