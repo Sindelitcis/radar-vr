@@ -53,39 +53,6 @@
       "max_ms": 528.5
     }
   },
-  "falhas_antes": {
-    "executado_em": "2026-10-17 08:27",
-    "llm_fora_do_ar": {
-      "assinantes": 20,
-      "segundos": 10.2,
-      "envelopes_validos": 20,
-      "origem": [
-        "regra"
-      ]
-    },
-    "canal_fora_do_ar": {
-      "http": 502,
-      "canal": "telegram",
-      "status": "falhou",
-      "tentativas": 0,
-      "latencia_ms": 0,
-      "erro": "falha simulada (RADAR_FALHAR_CANAIS)",
-      "id": ""
-    },
-    "corpo_invalido": {
-      "http": 400,
-      "erro": "campos obrigatórios ausentes: edicao_id, para, assunto, html"
-    },
-    "anexo_fora_da_pasta": {
-      "http": 200,
-      "canal": "email",
-      "status": "simulado",
-      "tentativas": 0,
-      "latencia_ms": 0,
-      "erro": "",
-      "id": ""
-    }
-  },
   "envio": {
     "executado_em": "2026-10-17 08:30",
     "1": {
@@ -122,40 +89,28 @@
       "max_ms": 95.8
     }
   },
-  "falhas": {
-    "executado_em": "2026-10-17 08:31",
-    "llm_fora_do_ar": {
-      "assinantes": 20,
-      "segundos": 2.1,
-      "envelopes_validos": 20,
-      "origem": [
-        "regra"
-      ]
+  "coleta": {
+    "executado_em": "2026-10-17 08:38",
+    "paralelo_1": {
+      "execucoes_s": [
+        29.4,
+        29.8,
+        30.0
+      ],
+      "mediana_s": 29.8,
+      "titulos": 15
     },
-    "canal_fora_do_ar": {
-      "http": 502,
-      "canal": "telegram",
-      "status": "falhou",
-      "tentativas": 0,
-      "latencia_ms": 0,
-      "erro": "falha simulada (RADAR_FALHAR_CANAIS)",
-      "id": ""
-    },
-    "corpo_invalido": {
-      "http": 400,
-      "erro": "campos obrigatórios ausentes: edicao_id, para, assunto, html"
-    },
-    "anexo_fora_da_pasta": {
-      "http": 200,
-      "canal": "email",
-      "status": "simulado",
-      "tentativas": 0,
-      "latencia_ms": 0,
-      "erro": "",
-      "id": ""
+    "paralelo_4": {
+      "execucoes_s": [
+        19.5,
+        19.3,
+        19.3
+      ],
+      "mediana_s": 19.3,
+      "titulos": 15
     }
   },
-  "personalizacao": {
+  "personalizacao_com_llm": {
     "executado_em": "2026-10-17 08:31",
     "antes": {
       "10": {
@@ -222,25 +177,131 @@
       }
     }
   },
-  "coleta": {
-    "executado_em": "2026-10-17 08:38",
-    "paralelo_1": {
-      "execucoes_s": [
-        29.4,
-        29.8,
-        30.0
-      ],
-      "mediana_s": 29.8,
-      "titulos": 15
+  "falhas_com_llm": {
+    "executado_em": "2026-10-17 08:31",
+    "llm_fora_do_ar": {
+      "assinantes": 20,
+      "segundos": 2.1,
+      "envelopes_validos": 20,
+      "origem": [
+        "regra"
+      ]
     },
-    "paralelo_4": {
-      "execucoes_s": [
-        19.5,
-        19.3,
-        19.3
-      ],
-      "mediana_s": 19.3,
-      "titulos": 15
+    "canal_fora_do_ar": {
+      "http": 502,
+      "canal": "telegram",
+      "status": "falhou",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "falha simulada (RADAR_FALHAR_CANAIS)",
+      "id": ""
+    },
+    "corpo_invalido": {
+      "http": 400,
+      "erro": "campos obrigatórios ausentes: edicao_id, para, assunto, html"
+    },
+    "anexo_fora_da_pasta": {
+      "http": 200,
+      "canal": "email",
+      "status": "simulado",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "",
+      "id": ""
+    }
+  },
+  "falhas_com_llm_antes": {
+    "executado_em": "2026-10-17 08:27",
+    "llm_fora_do_ar": {
+      "assinantes": 20,
+      "segundos": 10.2,
+      "envelopes_validos": 20,
+      "origem": [
+        "regra"
+      ]
+    },
+    "canal_fora_do_ar": {
+      "http": 502,
+      "canal": "telegram",
+      "status": "falhou",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "falha simulada (RADAR_FALHAR_CANAIS)",
+      "id": ""
+    },
+    "corpo_invalido": {
+      "http": 400,
+      "erro": "campos obrigatórios ausentes: edicao_id, para, assunto, html"
+    },
+    "anexo_fora_da_pasta": {
+      "http": 200,
+      "canal": "email",
+      "status": "simulado",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "",
+      "id": ""
+    }
+  },
+  "personalizacao": {
+    "executado_em": "2026-10-17 09:02",
+    "10": {
+      "assinantes": 10,
+      "segundos": 0.03,
+      "assinantes_por_s": 371,
+      "com_email": 10,
+      "com_alerta": 10
+    },
+    "100": {
+      "assinantes": 100,
+      "segundos": 0.03,
+      "assinantes_por_s": 2941,
+      "com_email": 100,
+      "com_alerta": 100
+    },
+    "1000": {
+      "assinantes": 1000,
+      "segundos": 0.32,
+      "assinantes_por_s": 3172,
+      "com_email": 1000,
+      "com_alerta": 1000
+    },
+    "5000": {
+      "assinantes": 5000,
+      "segundos": 1.61,
+      "assinantes_por_s": 3109,
+      "com_email": 5000,
+      "com_alerta": 5000
+    }
+  },
+  "falhas": {
+    "executado_em": "2026-10-17 09:02",
+    "llm_fora_do_ar": {
+      "anuncios": 20,
+      "segundos": 2.1,
+      "com_chamada": 20
+    },
+    "canal_fora_do_ar": {
+      "http": 502,
+      "canal": "telegram",
+      "status": "falhou",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "falha simulada (RADAR_FALHAR_CANAIS)",
+      "id": ""
+    },
+    "corpo_invalido": {
+      "http": 400,
+      "erro": "campos obrigatórios ausentes: edicao_id, para, assunto, html"
+    },
+    "anexo_fora_da_pasta": {
+      "http": 200,
+      "canal": "email",
+      "status": "simulado",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "",
+      "id": ""
     }
   }
 }

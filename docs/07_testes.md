@@ -113,39 +113,53 @@ sem IPv6). A correção fica configurável porque depende da rede.
 
 ### 3.4 LLM na personalização
 
-O modelo local atende uma requisição por vez, e cada assinante custava uma
-chamada de 1,6 a 2,4 s. A personalização crescia linearmente com a base.
+Na primeira versão, o modelo local escrevia o assunto, a abertura e o alerta
+de cada assinante. Ele atende uma requisição por vez, e cada assinante custava
+uma chamada de 1,6 a 2,4 s: a personalização crescia linearmente com a base.
 
-Assinantes com os mesmos interesses recebem os mesmos fatos, e o texto gerado
-para um serve para todos. O nome entra depois, fora do texto do modelo.
+**Primeira mudança:** cache do texto gerado. Assinantes com os mesmos
+interesses recebem os mesmos fatos, e o texto gerado para um serve para
+todos; a chave é o conteúdo enviado ao modelo, sem dado pessoal.
 
-**Mudança:** cache do texto gerado, com chave no conteúdo enviado ao modelo
-(gêneros, fatos e urgências, sem dado pessoal), e montagem dos envelopes em
-paralelo.
-
-| Assinantes | Antes | Depois | Chamadas ao LLM (antes → depois) |
+| Assinantes | Sem cache | Com cache | Chamadas ao LLM |
 |---:|---:|---:|---:|
 | 10 | 23,5 s | 14,1 s | 10 → 9 |
 | 50 | 83,9 s | 19,3 s | 50 → 12 |
-| 100 | 164,2 s | **19,8 s** | 100 → 12 |
+| 100 | 164,2 s | 19,8 s | 100 → 12 |
 
-Com 100 assinantes, a vazão foi de 0,61 para 5,06 assinantes por segundo. O
-custo passa a depender do número de combinações distintas de interesse, e não
-do número de assinantes.
+**Segunda mudança:** o modelo saiu da personalização. Ao revisar as mensagens
+reais, o texto gerado era fraco ("Moss II VR em promoção") e, mesmo com a
+conferência de números aprovando, inventava detalhes que não estavam nos
+fatos, como "jogo de puzzle" e "jogo de plataformas" para o mesmo título em
+execuções seguidas, e chamou de "inédito" um preço igual ao recorde. Assunto
+e abertura passaram a ser montados por regra a partir do fato mais
+importante, que é exatamente o que o modelo deveria dizer. O LLM continua na
+edição, onde resume o texto livre dos anúncios.
+
+| Assinantes | Com LLM | Com cache | Por regra |
+|---:|---:|---:|---:|
+| 10 | 23,5 s | 14,1 s | 0,03 s |
+| 100 | 164,2 s | 19,8 s | **0,03 s** |
+| 1.000 | – | – | 0,32 s |
+| 5.000 | – | – | 1,61 s |
+
+Cerca de 3.000 assinantes por segundo, linear até 5.000. O custo da
+personalização deixou de importar; o limite passa a ser o envio, que depende
+do provedor (item 5).
 
 ### 3.5 LLM fora do ar
 
-Com o Ollama desligado, todo assinante recebe o boletim com o texto padrão. O
-primeiro teste levou 10,2 s para 20 assinantes: cada um esperava a conexão
-ser recusada (no Windows, cerca de 2 s).
+Na Etapa 1, a redação conferia o Ollama antes de começar e, sem ele, abortava
+a edição inteira. Um serviço auxiliar derrubava o produto.
 
-**Mudança:** disjuntor. Na primeira recusa de conexão, as chamadas seguintes
-falham na hora durante 60 s.
+**Mudança:** sem o modelo, cada anúncio sai com o resumo factual no lugar da
+síntese, e a edição segue. Um disjuntor evita insistir: depois de uma recusa
+de conexão, o Ollama não é chamado por 60 s.
 
-| 20 assinantes, Ollama desligado | Tempo | Envelopes válidos |
-|---|---:|---:|
-| Antes | 10,2 s | 20 de 20 |
-| Depois | **2,1 s** | 20 de 20 |
+| 20 anúncios, Ollama desligado | Etapa 1 | Etapa 2 |
+|---|---|---|
+| Edição | abortada | concluída em 2,1 s |
+| Chamadas publicadas | 0 | 20 de 20, pela regra |
 
 ## 4. Falhas e proteções
 
@@ -156,17 +170,15 @@ falham na hora durante 60 s.
 | Microsserviço fora do ar | n8n registra e encerra com erro | `logs/n8n_falhas.log`, execução com erro |
 | Corpo sem campos obrigatórios | 400 com a lista | 400: `edicao_id, para, assunto, html` |
 | Anexo `../../.env` | nenhum arquivo fora de `audio/` | só o nome é usado; arquivo inexistente, nada anexado |
-| LLM cita número que não está nos fatos | texto descartado | frase padrão (verificação em `personalizacao._confere`) |
 
 Os cenários do n8n estão em [docs/05_n8n.md](05_n8n.md#5-evidências).
 
 ## 5. Leitura crítica
 
-**O que ainda limita.** O modelo local continua sendo o recurso mais caro.
-O cache funciona porque interesses se repetem; numa base com interesses muito
-diversos, ele rende menos. O próximo passo seria agrupar os assinantes por
-assinatura de interesse antes de chamar o modelo, e não depois, o que também
-eliminaria chamadas concorrentes para a mesma chave.
+**O que ainda limita.** A edição depende de um único fornecedor de dados,
+a Steam, consultado em ritmo deliberadamente lento. Com o modelo fora da
+personalização, o recurso mais caro por assinante passou a ser o envio, e o
+de cada edição, a coleta.
 
 **O que não deve melhorar.** A coleta está perto do piso de 18 s por escolha:
 o ritmo protege o acesso à Steam, que é a fonte de tudo. Para cobrir mais
@@ -179,6 +191,9 @@ por conta, e o Telegram, 30 mensagens por segundo por bot. Para a base de
 assinantes atual, nenhum dos dois é gargalo. Para um serviço público, o
 e-mail precisaria de um provedor transacional.
 
-**Onde a medição mudou a decisão.** Duas das cinco melhorias (banco e IPv6)
-não estavam no plano: apareceram nos números. O banco, em especial, parecia
-irrelevante ao lado de rede e LLM, e era o que mais limitava a vazão do envio.
+**Onde a medição mudou a decisão.** Três das cinco mudanças não estavam no
+plano: banco e IPv6 apareceram nos números, e a saída do LLM da
+personalização veio de olhar o resultado, não só o tempo. O cache tinha
+resolvido a velocidade; a leitura das mensagens mostrou que o modelo não
+acrescentava informação e às vezes acrescentava erro. A melhoria mais
+eficaz foi remover a etapa.

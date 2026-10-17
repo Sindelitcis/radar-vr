@@ -124,37 +124,25 @@ def cenario_coleta():
 
 
 def cenario_personalizacao():
-    """Assinantes por segundo, antes e depois do cache de redacao."""
+    """Assinantes por segundo na rota /personalizar."""
     edicao = json.loads((RAIZ / "data" / "edicao_atual.json").read_text(encoding="utf-8"))
-    configuracoes = {
-        "antes": {"RADAR_CACHE_REDACAO": "0", "RADAR_PERSONALIZACAO_PARALELA": "1"},
-        "depois": {"RADAR_CACHE_REDACAO": "1", "RADAR_PERSONALIZACAO_PARALELA": "4"},
-    }
     resultado = {}
-    for rotulo, env in configuracoes.items():
-        resultado[rotulo] = {}
-        for quantidade in (10, 50, 100):
-            with Servico(**env):
-                perfis = perfis_sinteticos(quantidade, edicao)
-                inicio = time.perf_counter()
-                resposta = requests.post(f"{URL}/personalizar",
-                                         json={"perfis": ["-"], "perfis_extras": perfis,
-                                               "todos": True}, timeout=3600)
-                segundos = time.perf_counter() - inicio
-                envelopes = resposta.json()
-                metricas = requests.get(f"{URL}/metricas", timeout=10).json()
+    with Servico():
+        for quantidade in (10, 100, 1000, 5000):
+            perfis = perfis_sinteticos(quantidade, edicao)
+            inicio = time.perf_counter()
+            envelopes = requests.post(f"{URL}/personalizar", timeout=600, json={
+                "perfis": ["-"], "perfis_extras": perfis, "todos": True}).json()
+            segundos = time.perf_counter() - inicio
             linha = {
                 "assinantes": quantidade,
-                "segundos": round(segundos, 1),
-                "assinantes_por_s": round(quantidade / segundos, 2),
-                "chamadas_llm": metricas["llm"],
-                "acertos_cache": metricas["cache"],
-                "pela_regra": metricas["regra"],
+                "segundos": round(segundos, 2),
+                "assinantes_por_s": round(quantidade / segundos),
                 "com_email": sum(1 for e in envelopes if e["email"]),
                 "com_alerta": sum(1 for e in envelopes if e["instantaneo"]),
             }
-            resultado[rotulo][quantidade] = linha
-            print(f"  {rotulo:6} {linha}")
+            resultado[quantidade] = linha
+            print(f"  personalização {linha}")
     return resultado
 
 
@@ -215,20 +203,21 @@ def cenario_idempotencia():
 
 def cenario_falhas():
     """Comportamento com dependencias fora do ar."""
-    edicao = json.loads((RAIZ / "data" / "edicao_atual.json").read_text(encoding="utf-8"))
-    perfis = perfis_sinteticos(20, edicao)
     resultado = {}
 
-    with Servico(OLLAMA_URL="http://127.0.0.1:9", RADAR_CACHE_REDACAO="0"):
-        inicio = time.perf_counter()
-        envelopes = requests.post(f"{URL}/personalizar", timeout=600, json={
-            "perfis": ["-"], "perfis_extras": perfis, "todos": True}).json()
-        resultado["llm_fora_do_ar"] = {
-            "assinantes": len(perfis),
-            "segundos": round(time.perf_counter() - inicio, 1),
-            "envelopes_validos": sum(1 for e in envelopes if e["email"]),
-            "origem": sorted({e["origem_texto"] for e in envelopes}),
-        }
+    import config
+    import redacao
+
+    config.OLLAMA_URL = "http://127.0.0.1:9"
+    anuncios = [{"tipo": "PATCH_GRANDE", "nome": f"Jogo {i}", "resumo": "recebeu atualização",
+                 "dados": {"texto": "notas da versão"}} for i in range(20)]
+    inicio = time.perf_counter()
+    redacao.redigir(anuncios)
+    resultado["llm_fora_do_ar"] = {
+        "anuncios": len(anuncios),
+        "segundos": round(time.perf_counter() - inicio, 1),
+        "com_chamada": sum(1 for e in anuncios if e.get("linha")),
+    }
 
     with Servico(RADAR_FALHAR_CANAIS="telegram"):
         resposta = requests.post(f"{URL}/enviar/instantaneo", timeout=60, json={

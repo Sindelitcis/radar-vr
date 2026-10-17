@@ -23,7 +23,7 @@ recorte do que ele acompanha, pelo canal adequado à urgência do fato.
                  └────────────────────────────────────────────────────┘
                         │ HTTP (127.0.0.1:8765)
                  ┌──────▼────────── microsserviço Python ─────────────┐
-                 │ Steam + ITAD → eventos → LLM → voz → personalização │
+                 │ Steam + ITAD → eventos → LLM → voz → personalização│
                  │ envio (SMTP, Telegram, WhatsApp) + auditoria       │
                  └────────────────────────────────────────────────────┘
 ```
@@ -43,7 +43,6 @@ canal sem afetar os outros.
 | `POST /enviar/email` | envia o boletim personalizado, com a narração anexa |
 | `POST /enviar/instantaneo` | envia o alerta por Telegram ou WhatsApp |
 | `POST /falha` | registra falha vinda do n8n e avisa o operador por e-mail |
-| `GET /metricas` | chamadas ao LLM, acertos de cache, textos pela regra |
 
 Envio que falha responde **502** com o resultado no corpo. Para o n8n, isso é
 erro, e o item segue pela saída de erro do nó, que leva à contingência.
@@ -58,14 +57,34 @@ instantâneo (`perfis.json`, fora do Git; modelo em `perfis.exemplo.json`).
 | O que entra | regra | evento de jogo seguido ou de gênero de interesse |
 | Urgência | regra | menor preço da história, ou promoção que acaba em até 2 dias, dentro do orçamento |
 | Canal | regra | e-mail sempre que há fato relevante; alerta instantâneo só com urgência |
-| Texto | LLM | assunto, abertura e alerta, a partir dos fatos já apurados |
+| Texto | regra | assunto, abertura e alerta montados a partir do fato mais importante |
 
-O mesmo princípio da Etapa 1: **a regra apura, o modelo redige.** Canal e
-urgência precisam ser explicáveis e reproduzíveis.
+O LLM fica onde agrega: resumir o texto livre dos anúncios de atualização, na
+edição. Os cartões reaproveitam esse resumo.
 
-O texto do modelo passa por uma conferência antes de sair: todo número
-presente no texto gerado precisa constar nos fatos de entrada. Se o modelo
-inventar ou arredondar um preço, o texto é descartado e entra a frase padrão.
+Uma primeira versão usava o modelo também para escrever o assunto de cada
+assinante, com uma conferência de números contra os fatos. Saiu por dois
+motivos medidos: era o gargalo da personalização (164 s para 100
+assinantes) e, mesmo com números corretos, inventava detalhes que não
+estavam nos fatos ("jogo de puzzle", "preço inédito"). O histórico está em
+[07_testes.md](07_testes.md#34-llm-na-personalização).
+
+### Formato das mensagens
+
+Feitas para leitura de relance: só o que mudou, sem lista de jogos parados.
+
+| Canal | Formato |
+|---|---|
+| E-mail | bloco "Atenção hoje" para o que é urgente, cartões com rótulo colorido, preço com o corte em verde e uma linha curta ("Menor preço histórico · visto pela última vez em 03/2025") |
+| Telegram | duas linhas por oferta: nome com link e corte; preço e o fato |
+
+```
+🔥 Moss II VR  −50%
+R$ 59,99 R$ 29,99 · menor preço histórico
+```
+
+A escolha de jogos e de avisos fica no painel do assinante, previsto para a
+etapa final. As mensagens não carregam configuração.
 
 Os jogos seguidos pelos assinantes entram na watchlist mesmo fora dos 15 mais
 avaliados. A edição passa a cobrir o que a base de assinantes de fato
@@ -99,9 +118,18 @@ os termos do site.
 | Telegram | alerta urgente | Bot API, `@radar_vr_boletim_bot` |
 | WhatsApp | alerta urgente (alternativo) | WhatsApp Cloud API, oficial da Meta |
 
-O alerta instantâneo remete ao e-mail ("boletim completo no seu e-mail:
-*assunto*"). Se o e-mail falhou, o n8n informa o status ao enviar o alerta, e
-a referência é retirada do texto.
+Os canais não repetem um ao outro: o alerta traz só a urgência, e o e-mail,
+o dia completo. O n8n envia ao alerta o resultado do e-mail; se o e-mail
+falhou, o alerta passa a levar também as demais novidades, em uma linha
+cada:
+
+```
+🔥 Moss II VR  −50%
+R$ 59,99 R$ 29,99 · menor preço histórico
+
+Também hoje:
+• Beat Saber: recebeu a atualização 1.45.3
+```
 
 ### WhatsApp
 
@@ -131,8 +159,7 @@ mensagem iniciada pela empresa é cobrada. Trocar de canal é editar
 | Título da Steam sem resposta | título ignorado, edição segue com os demais |
 | Credencial inválida, destinatário recusado | falha definitiva, sem nova tentativa |
 | ITAD fora do ar | edição segue sem histórico de preços |
-| Ollama fora do ar | texto pela regra; disjuntor evita esperar o timeout a cada assinante |
-| LLM inventa número | texto descartado, frase padrão |
+| Ollama fora do ar | edição segue com o resumo factual no lugar da síntese do anúncio; disjuntor evita esperar o timeout a cada chamada |
 | Canal instantâneo falha | n8n desvia o alerta para o e-mail |
 | E-mail falha | n8n registra em `/falha`, que avisa o operador |
 | Microsserviço fora do ar | n8n tenta de novo, grava `logs/n8n_falhas.log` e encerra com erro |
@@ -171,8 +198,7 @@ fluxos do n8n, que leem `RADAR_SERVICO_URL` e `RADAR_DIR_LOGS` por `$env`.
 | `RADAR_DRY_RUN` | nenhuma mensagem sai da máquina; usado nos testes de carga |
 | `RADAR_FALHAR_CANAIS` | força falha de um canal para exercitar a contingência |
 | `RADAR_COLETA_PARALELA` | coletas simultâneas na Steam |
-| `RADAR_PERSONALIZACAO_PARALELA` | assinantes processados em paralelo |
-| `RADAR_CACHE_REDACAO` | reaproveita o texto entre assinantes de mesmo interesse |
+| `RADAR_DISJUNTOR_S` | tempo sem chamar o Ollama depois de uma recusa de conexão |
 | `RADAR_FORCAR_IPV4` | evita o timeout de IPv6 até a API do Telegram |
 | `RADAR_REAPROVEITAR_EDICAO` | no n8n, reenvia a edição atual sem gerar outra |
 
