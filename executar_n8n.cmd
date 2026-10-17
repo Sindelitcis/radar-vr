@@ -2,7 +2,7 @@
 REM ============================================================================
 REM  Radar VR - lancador do n8n
 REM
-REM    executar_n8n.cmd ui      abre a interface em http://localhost:5678
+REM    executar_n8n.cmd         abre a interface em http://localhost:5678
 REM    executar_n8n.cmd run     executa o boletim personalizado sem interface
 REM    executar_n8n.cmd import  reimporta os fluxos a partir dos JSON
 REM
@@ -26,8 +26,8 @@ if "%RADAR_SERVICO_URL%"=="" set RADAR_SERVICO_URL=http://127.0.0.1:8765
 
 if /i "%~1"=="run"    goto :run
 if /i "%~1"=="import" goto :import
-if /i "%~1"=="ui"     goto :ui
-goto :ajuda
+if /i "%~1"=="ajuda"  goto :ajuda
+goto :ui
 
 :ui
 echo  Subindo o n8n. Quando aparecer "Editor is now accessible", abra:
@@ -45,6 +45,6 @@ call n8n execute --id=radarVRetapa2001
 goto :eof
 
 :ajuda
-echo  Uso: executar_n8n.cmd ui ^| run ^| import
+echo  Uso: executar_n8n.cmd [ui] ^| run ^| import
 echo  "ui" e "run" nao rodam juntos: ambos usam a porta 5679 do task broker.
 goto :eof
