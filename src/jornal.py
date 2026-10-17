@@ -22,6 +22,7 @@ import config
 import historico
 import itad
 import noticias
+import personalizacao
 import redacao
 import voz
 
@@ -188,10 +189,19 @@ def publicar(titulos=None, gerar_audio=True, extras=()):
     return edicao
 
 
+def _jogos_seguidos():
+    """Jogos acompanhados pelos assinantes, para que a edicao do painel sirva
+    tambem ao fluxo personalizado."""
+    try:
+        return personalizacao.jogos_seguidos(personalizacao.carregar_perfis())
+    except FileNotFoundError:
+        return ()
+
+
 def executar(titulos=None, gerar_audio=True):
     log = configurar_log()
     try:
-        edicao = publicar(titulos, gerar_audio)
+        edicao = publicar(titulos, gerar_audio, _jogos_seguidos())
     except RuntimeError as erro:
         log.error("%s", erro)
         return 1

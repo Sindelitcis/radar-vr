@@ -105,7 +105,8 @@ def selecionar(perfil, edicao):
             urgentes.append(evento)
         else:
             itens.append(evento)
-    return {"urgentes": urgentes, "itens": itens}
+    # O que nao cabe no e-mail fica de fora tambem da contagem e do assunto.
+    return {"urgentes": urgentes, "itens": itens[:MAX_ITENS_EMAIL]}
 
 
 def _fato(evento):
@@ -243,7 +244,7 @@ def montar_email(perfil, selecao, mensagem, edicao):
     if selecao["itens"]:
         partes.append(_secao(
             "Novidades nos seus jogos",
-            "".join(_cartao(e) for e in selecao["itens"][:MAX_ITENS_EMAIL]),
+            "".join(_cartao(e) for e in selecao["itens"]),
         ))
     if edicao.get("audio"):
         partes.append('<div style="color:#555;font-size:13px">Narração da edição em anexo.</div>')
@@ -254,6 +255,23 @@ def montar_email(perfil, selecao, mensagem, edicao):
         f"dados da Steam · inscrito em {inscrito} · responda SAIR para cancelar</div></div>"
     )
     return "".join(partes)
+
+
+def montar_texto(perfil, selecao, mensagem):
+    """Versao em texto puro do e-mail, para leitores sem HTML e filtros de spam."""
+    linhas = [f"Olá, {perfil['nome']}", mensagem["abertura"], ""]
+    for titulo, eventos in (("ATENÇÃO HOJE", selecao["urgentes"]),
+                            ("NOVIDADES NOS SEUS JOGOS", selecao["itens"])):
+        if not eventos:
+            continue
+        linhas.append(titulo)
+        for evento in eventos:
+            preco = f" · {evento['preco']}" if evento["tipo"] in TIPOS_DE_PRECO and evento.get("preco") else ""
+            linhas.append(f"- {evento['nome']}{preco}: {destaque(evento)}")
+            linhas.append(f"  {evento['url']}")
+        linhas.append("")
+    linhas.append(f"Preço histórico: {itad.FONTE} · responda SAIR para cancelar")
+    return "\n".join(linhas)
 
 
 # ---------------------------------------------------------------- alerta
@@ -280,7 +298,7 @@ def montar_complemento(selecao):
     if not selecao["itens"]:
         return ""
     linhas = []
-    for evento in selecao["itens"][:MAX_ITENS_EMAIL]:
+    for evento in selecao["itens"]:
         fato = destaque(evento).split(" · ")[0]
         linhas.append(f'• <a href="{html.escape(evento["url"])}">{html.escape(evento["nome"])}</a>: '
                       f'{html.escape(fato[:1].lower() + fato[1:])}')
@@ -311,6 +329,7 @@ def _envelope(perfil, edicao):
         "para": perfil["email"],
         "assunto": mensagem["assunto"],
         "html": montar_email(perfil, selecao, mensagem, edicao),
+        "texto": montar_texto(perfil, selecao, mensagem),
         "anexo": edicao.get("audio") or "",
     }
     canal = perfil.get("instantaneo") or {}

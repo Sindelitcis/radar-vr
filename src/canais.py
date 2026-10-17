@@ -35,20 +35,23 @@ class FalhaDefinitiva(Exception):
 
 
 def _com_tentativas(funcao, descricao):
-    ultima = None
+    """Devolve (resultado, tentativas). Na falha, a excecao leva `tentativas`."""
     for tentativa in range(1, config.TENTATIVAS_ENVIO + 1):
         try:
             return funcao(), tentativa
-        except FalhaDefinitiva:
-            raise
         except Exception as erro:
-            ultima = erro
-            if tentativa < config.TENTATIVAS_ENVIO:
-                espera = config.ESPERA_BASE_S * 2 ** (tentativa - 1)
-                log.warning("%s falhou (%s); nova tentativa em %.1f s",
-                            descricao, erro, espera)
-                time.sleep(espera)
-    raise ultima
+            erro.tentativas = tentativa
+            if isinstance(erro, FalhaDefinitiva) or tentativa == config.TENTATIVAS_ENVIO:
+                raise
+            espera = config.ESPERA_BASE_S * 2 ** (tentativa - 1)
+            log.warning("%s falhou (%s); nova tentativa em %.1f s",
+                        descricao, erro, espera)
+            time.sleep(espera)
+
+
+def _falha(canal, inicio, erro):
+    return _resultado(canal, inicio, "falhou", getattr(erro, "tentativas", 1),
+                      _sem_token(str(erro)))
 
 
 def _resultado(canal, inicio, status, tentativas=0, erro="", id_externo=""):
@@ -92,6 +95,9 @@ def enviar_email(para, assunto, html, texto="", anexo=None):
     mensagem["To"] = para
     mensagem["Subject"] = assunto
     mensagem["Message-ID"] = make_msgid(domain=config.GMAIL_USER.split("@")[-1])
+    # Botao "cancelar inscricao" do Gmail e do Outlook; a resposta cai na caixa
+    # do operador, que remove o perfil.
+    mensagem["List-Unsubscribe"] = f"<mailto:{config.GMAIL_USER}?subject=SAIR>"
     mensagem.set_content(texto or "Abra este e-mail em um leitor com suporte a HTML.")
     mensagem.add_alternative(html, subtype="html")
 
@@ -116,7 +122,7 @@ def enviar_email(para, assunto, html, texto="", anexo=None):
         return _resultado("email", inicio, "enviado", tentativas,
                           id_externo=mensagem["Message-ID"])
     except Exception as erro:
-        return _resultado("email", inicio, "falhou", config.TENTATIVAS_ENVIO, str(erro))
+        return _falha("email", inicio, erro)
 
 
 # ---------------------------------------------------------------- Telegram
@@ -142,8 +148,7 @@ def enviar_telegram(chat_id, texto):
         return _resultado("telegram", inicio, "enviado", tentativas,
                           id_externo=str(dados["result"]["message_id"]))
     except Exception as erro:
-        return _resultado("telegram", inicio, "falhou", config.TENTATIVAS_ENVIO,
-                          _sem_token(str(erro)))
+        return _falha("telegram", inicio, erro)
 
 
 def _sem_token(texto):
@@ -180,7 +185,7 @@ def enviar_whatsapp(numero, texto):
         return _resultado("whatsapp", inicio, "enviado", tentativas,
                           id_externo=dados["messages"][0]["id"])
     except Exception as erro:
-        return _resultado("whatsapp", inicio, "falhou", config.TENTATIVAS_ENVIO, str(erro))
+        return _falha("whatsapp", inicio, erro)
 
 
 INSTANTANEOS = {"telegram": enviar_telegram, "whatsapp": enviar_whatsapp}

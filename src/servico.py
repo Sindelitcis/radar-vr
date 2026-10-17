@@ -9,6 +9,7 @@ Expoe o pipeline e os canais para o n8n, que orquestra a sequencia:
     POST /enviar/instantaneo  envia o alerta por Telegram ou WhatsApp
     POST /falha               registra falha reportada pelo n8n e avisa o operador
     GET  /saude               dependencias e configuracao
+    GET  /                    lista das rotas
 
 Envio que falha responde 502 com o resultado no corpo: o n8n trata o status
 como erro e desvia o item para o ramo de contingencia.
@@ -55,6 +56,11 @@ def _exigir(corpo, *campos):
 
 
 # ---------------------------------------------------------------- rotas
+
+def indice(_):
+    return 200, {"servico": "Radar VR", "dry_run": config.DRY_RUN,
+                 "rotas": [f"{metodo} {caminho}" for metodo, caminho in ROTAS]}
+
 
 def saude(_):
     try:
@@ -151,7 +157,7 @@ def enviar_email(corpo):
     anexo = _anexo(corpo.get("anexo"))
     canal = "email_contingencia" if corpo.get("contingencia") else "email"
     return _enviar(corpo, canal, lambda: canais.enviar_email(
-        corpo["para"], corpo["assunto"], corpo["html"], anexo=anexo))
+        corpo["para"], corpo["assunto"], corpo["html"], corpo.get("texto", ""), anexo))
 
 
 def enviar_instantaneo(corpo):
@@ -182,6 +188,7 @@ def registrar_falha(corpo):
 
 
 ROTAS = {
+    ("GET", "/"): indice,
     ("GET", "/saude"): saude,
     ("GET", "/edicao/atual"): edicao_atual,
     ("POST", "/edicao"): gerar_edicao,
@@ -242,8 +249,11 @@ class Manipulador(BaseHTTPRequestHandler):
 def main():
     jornal.configurar_log()
     servidor = ThreadingHTTPServer((config.SERVICO_HOST, config.SERVICO_PORTA), Manipulador)
-    log.info("Radar VR em http://%s:%d (dry_run=%s)",
-             config.SERVICO_HOST, config.SERVICO_PORTA, config.DRY_RUN)
+    log.info("Radar VR em http://%s:%d", config.SERVICO_HOST, config.SERVICO_PORTA)
+    if config.DRY_RUN:
+        log.info("MODO ENSAIO (DRY_RUN): o fluxo roda inteiro, nenhuma mensagem sai da máquina")
+    else:
+        log.info("MODO REAL: e-mail e alertas são entregues aos assinantes")
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:
