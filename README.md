@@ -19,28 +19,34 @@ Um dia com o Moss II VR no menor preço da história:
 | E-mail | assunto "Moss II VR no menor preço histórico"; cartão com -50%, preço cheio riscado, preço atual e "visto pela última vez em 03/2025" |
 | Telegram | 🔥 Moss II VR −50% · R$ 29,99 · menor preço histórico |
 
-Quem não teve novidade nos seus jogos não recebe nada. O alerta não repete o
-e-mail; só quando o e-mail falha é que ele leva também as outras novidades do
-dia.
+Quem não teve novidade nos seus jogos não recebe nada. O alerta do Telegram
+traz só o urgente, porque o resto já está no e-mail.
 
 ## Como funciona
 
+O fluxo roda no n8n. Cada passo chama um microsserviço Python
+(`src/servico.py`), que faz o trabalho:
+
 ```
-                 n8n (orquestra)
-                       │
-   ┌───────────────────┼─────────────────────────────────────────┐
-   ▼                   ▼                   ▼                     ▼
-Gerar edição   →  Personalizar   →  Enviar e-mail   →   Alerta no Telegram
-                  por assinante                         (só se urgente)
-   │                                       │                     │
-   │                                  falhou: alerta        falhou: alerta
-   │                                  leva o resto do dia   vai por e-mail
-   ▼
-Steam + IsThereAnyDeal → compara com a leitura anterior → eventos
+n8n                                  microsserviço
+───────────────────────────────      ──────────────────────────────────────
+1. Gerar edição               ───►   coleta a Steam e o IsThereAnyDeal
+2. Personalizar por assinante ───►   escolhe as novidades de cada pessoa
+3. Enviar e-mail              ───►   envia pelo Gmail
+4. Tem alerta urgente?
+   sim: Enviar alerta         ───►   envia pelo Telegram
 ```
 
-O n8n decide a ordem e o que fazer quando algo falha. O trabalho em si fica
-num microsserviço Python (`src/servico.py`), que o n8n chama por HTTP:
+Quando um passo falha, o n8n desvia o caminho:
+
+| Falhou | O que acontece |
+|---|---|
+| E-mail | o alerta do Telegram leva também as outras novidades do dia, e o operador recebe um aviso |
+| Telegram | o alerta vai por e-mail |
+| E-mail e Telegram | nada chega ao assinante nessa edição; a falha fica registrada em log |
+| Microsserviço fora do ar | o n8n grava a falha em `logs/n8n_falhas.log` e encerra a execução |
+
+Rotas do microsserviço:
 
 | Rota | O que faz |
 |---|---|
