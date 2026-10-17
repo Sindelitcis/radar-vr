@@ -1,0 +1,35 @@
+{
+  "descricao": "Webhook de status da WhatsApp Cloud API para mensagem aceita pela API (HTTP 200) e recusada na entrega. Recebido em 17/10/2026 07:54 no painel de testes da Meta. Número do destinatário mascarado.",
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "1584073716360808",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15556488402",
+              "phone_number_id": "1349183004948343"
+            },
+            "statuses": [
+              {
+                "status": "failed",
+                "timestamp": "1792234460",
+                "recipient_id": "5541****2136",
+                "errors": [
+                  {
+                    "code": 130497,
+                    "title": "Business account is restricted from messaging users in this country.",
+                    "href": "https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes/"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

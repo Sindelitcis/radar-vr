@@ -4,7 +4,10 @@ Boletim diário em áudio sobre o que mudou nos jogos de realidade virtual que
 você acompanha na Steam: atualizações, promoções, prazos e movimentação de
 jogadores.
 
-**AI Factory, Etapa 1 (PUCPR)** por Rafael Probst
+Na Etapa 2, cada assinante recebe a própria edição: só os jogos e gêneros que
+acompanha, por e-mail, e um alerta no Telegram quando algo não pode esperar.
+
+**AI Factory, Etapas 1 e 2 (PUCPR)** por Rafael Probst
 
 ---
 
@@ -41,6 +44,20 @@ python src/jornal.py --titulos 8     # watchlist reduzida
 python src/jornal.py --sem-audio     # sem síntese de voz
 ```
 
+## Boletim personalizado
+
+```
+executar_servico.cmd          microsserviço em http://127.0.0.1:8765
+executar_n8n.cmd import       importa os fluxos
+executar_n8n.cmd run          edição → personalização → e-mail → alerta
+```
+
+`executar_servico.cmd teste` liga o modo DRY_RUN: o fluxo roda inteiro e
+nenhuma mensagem sai da máquina.
+
+Assinantes ficam em `perfis.json`, fora do Git (modelo em
+`perfis.exemplo.json`); credenciais, no `.env` (modelo em `.env.example`).
+
 ## Pipeline
 
 ```
@@ -58,7 +75,12 @@ sem chave          + série temporal        LLM + Kokoro      CSV e SQLite
 | [`pronuncia.py`](src/pronuncia.py) | texto escrito para texto falado |
 | [`voz.py`](src/voz.py) | roteiro e síntese com Kokoro |
 | [`boletim_html.py`](src/boletim_html.py) | edição em página |
-| [`jornal.py`](src/jornal.py) | orquestrador |
+| [`itad.py`](src/itad.py) | menor preço da história, pela API do IsThereAnyDeal |
+| [`jornal.py`](src/jornal.py) | orquestrador da edição |
+| [`personalizacao.py`](src/personalizacao.py) | recorte, urgência e texto por assinante |
+| [`canais.py`](src/canais.py) | e-mail, Telegram e WhatsApp |
+| [`auditoria.py`](src/auditoria.py) | trilha de envios e bloqueio de repetição |
+| [`servico.py`](src/servico.py) | microsserviço HTTP chamado pelo n8n |
 | [`painel.py`](src/painel.py) | console do operador |
 
 ## Saídas
@@ -69,7 +91,9 @@ sem chave          + série temporal        LLM + Kokoro      CSV e SQLite
 | `data/boletim_atual.html` | leitura, com preço no formato da loja |
 | `data/jornal_vr.csv` | manchetes publicadas |
 | `data/jornal_vr.db` | série temporal, insumo da próxima edição |
-| `logs/jornal.log` | registro das etapas |
+| `data/edicao_atual.json` | edição estruturada, entregue ao n8n |
+| `logs/jornal.log` | registro das etapas e das rotas |
+| `logs/auditoria.jsonl` | uma linha por decisão e por envio |
 
 Áudio e página são complementares: a narração serve para varrer o boletim sem
 tirar o headset; a página resolve o nome escrito e leva à loja por link.
@@ -106,4 +130,12 @@ limitada a algumas dezenas de linhas.
 | [Canvas](docs/02_canvas.md) | objetivos, escopo, riscos e critérios |
 | [Arquitetura](docs/03_arquitetura.md) | módulos, eventos, limiares e saídas |
 | [Ambiente](docs/04_ambiente.md) | stack, instalação e evidências de execução |
-| [n8n](docs/05_n8n.md) | fluxo de agendamento |
+| [n8n](docs/05_n8n.md) | fluxos, passagem de dados e contingência |
+| [Microsserviço e canais](docs/06_canais.md) | rotas, personalização, canais e erros |
+| [Testes de carga](docs/07_testes.md) | gargalos, melhorias e números antes e depois |
+
+---
+
+Preços históricos: [IsThereAnyDeal](https://isthereanydeal.com). Preços,
+jogadores e anúncios: Steam.
+

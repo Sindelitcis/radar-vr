@@ -1,0 +1,246 @@
+{
+  "idempotencia": {
+    "executado_em": "2026-10-17 08:27",
+    "simulado": 1,
+    "duplicado": 49
+  },
+  "ipv6": {
+    "executado_em": "2026-10-17 08:27",
+    "com_ipv6": [
+      23065,
+      44038,
+      44022
+    ],
+    "somente_ipv4": [
+      1757,
+      1855,
+      1922
+    ]
+  },
+  "envio_antes": {
+    "executado_em": "2026-10-17 08:29",
+    "1": {
+      "requisicoes": 500,
+      "concorrencia": 1,
+      "req_por_s": 28.6,
+      "erros": 0,
+      "n": 500,
+      "p50_ms": 10.1,
+      "p95_ms": 238.0,
+      "p99_ms": 275.1,
+      "max_ms": 378.3
+    },
+    "10": {
+      "requisicoes": 500,
+      "concorrencia": 10,
+      "req_por_s": 46.7,
+      "erros": 0,
+      "n": 500,
+      "p50_ms": 274.7,
+      "p95_ms": 393.3,
+      "p99_ms": 516.2,
+      "max_ms": 584.4
+    },
+    "50": {
+      "requisicoes": 500,
+      "concorrencia": 50,
+      "req_por_s": 131.9,
+      "erros": 0,
+      "n": 500,
+      "p50_ms": 374.2,
+      "p95_ms": 419.7,
+      "p99_ms": 496.3,
+      "max_ms": 528.5
+    }
+  },
+  "falhas_antes": {
+    "executado_em": "2026-10-17 08:27",
+    "llm_fora_do_ar": {
+      "assinantes": 20,
+      "segundos": 10.2,
+      "envelopes_validos": 20,
+      "origem": [
+        "regra"
+      ]
+    },
+    "canal_fora_do_ar": {
+      "http": 502,
+      "canal": "telegram",
+      "status": "falhou",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "falha simulada (RADAR_FALHAR_CANAIS)",
+      "id": ""
+    },
+    "corpo_invalido": {
+      "http": 400,
+      "erro": "campos obrigatórios ausentes: edicao_id, para, assunto, html"
+    },
+    "anexo_fora_da_pasta": {
+      "http": 200,
+      "canal": "email",
+      "status": "simulado",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "",
+      "id": ""
+    }
+  },
+  "envio": {
+    "executado_em": "2026-10-17 08:30",
+    "1": {
+      "requisicoes": 500,
+      "concorrencia": 1,
+      "req_por_s": 185.0,
+      "erros": 0,
+      "n": 500,
+      "p50_ms": 2.0,
+      "p95_ms": 22.6,
+      "p99_ms": 26.5,
+      "max_ms": 27.8
+    },
+    "10": {
+      "requisicoes": 500,
+      "concorrencia": 10,
+      "req_por_s": 822.7,
+      "erros": 0,
+      "n": 500,
+      "p50_ms": 11.6,
+      "p95_ms": 16.5,
+      "p99_ms": 19.0,
+      "max_ms": 21.8
+    },
+    "50": {
+      "requisicoes": 500,
+      "concorrencia": 50,
+      "req_por_s": 781.9,
+      "erros": 0,
+      "n": 500,
+      "p50_ms": 53.7,
+      "p95_ms": 80.4,
+      "p99_ms": 89.2,
+      "max_ms": 95.8
+    }
+  },
+  "falhas": {
+    "executado_em": "2026-10-17 08:31",
+    "llm_fora_do_ar": {
+      "assinantes": 20,
+      "segundos": 2.1,
+      "envelopes_validos": 20,
+      "origem": [
+        "regra"
+      ]
+    },
+    "canal_fora_do_ar": {
+      "http": 502,
+      "canal": "telegram",
+      "status": "falhou",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "falha simulada (RADAR_FALHAR_CANAIS)",
+      "id": ""
+    },
+    "corpo_invalido": {
+      "http": 400,
+      "erro": "campos obrigatórios ausentes: edicao_id, para, assunto, html"
+    },
+    "anexo_fora_da_pasta": {
+      "http": 200,
+      "canal": "email",
+      "status": "simulado",
+      "tentativas": 0,
+      "latencia_ms": 0,
+      "erro": "",
+      "id": ""
+    }
+  },
+  "personalizacao": {
+    "executado_em": "2026-10-17 08:31",
+    "antes": {
+      "10": {
+        "assinantes": 10,
+        "segundos": 23.5,
+        "assinantes_por_s": 0.43,
+        "chamadas_llm": 10,
+        "acertos_cache": 0,
+        "pela_regra": 0,
+        "com_email": 10,
+        "com_alerta": 10
+      },
+      "50": {
+        "assinantes": 50,
+        "segundos": 83.9,
+        "assinantes_por_s": 0.6,
+        "chamadas_llm": 50,
+        "acertos_cache": 0,
+        "pela_regra": 0,
+        "com_email": 50,
+        "com_alerta": 50
+      },
+      "100": {
+        "assinantes": 100,
+        "segundos": 164.2,
+        "assinantes_por_s": 0.61,
+        "chamadas_llm": 100,
+        "acertos_cache": 0,
+        "pela_regra": 0,
+        "com_email": 100,
+        "com_alerta": 100
+      }
+    },
+    "depois": {
+      "10": {
+        "assinantes": 10,
+        "segundos": 14.1,
+        "assinantes_por_s": 0.71,
+        "chamadas_llm": 9,
+        "acertos_cache": 1,
+        "pela_regra": 0,
+        "com_email": 10,
+        "com_alerta": 10
+      },
+      "50": {
+        "assinantes": 50,
+        "segundos": 19.3,
+        "assinantes_por_s": 2.58,
+        "chamadas_llm": 12,
+        "acertos_cache": 38,
+        "pela_regra": 0,
+        "com_email": 50,
+        "com_alerta": 50
+      },
+      "100": {
+        "assinantes": 100,
+        "segundos": 19.8,
+        "assinantes_por_s": 5.06,
+        "chamadas_llm": 12,
+        "acertos_cache": 88,
+        "pela_regra": 0,
+        "com_email": 100,
+        "com_alerta": 100
+      }
+    }
+  },
+  "coleta": {
+    "executado_em": "2026-10-17 08:38",
+    "paralelo_1": {
+      "execucoes_s": [
+        29.4,
+        29.8,
+        30.0
+      ],
+      "mediana_s": 29.8,
+      "titulos": 15
+    },
+    "paralelo_4": {
+      "execucoes_s": [
+        19.5,
+        19.3,
+        19.3
+      ],
+      "mediana_s": 19.3,
+      "titulos": 15
+    }
+  }
+}
