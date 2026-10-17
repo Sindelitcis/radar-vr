@@ -1,141 +1,151 @@
 # Radar VR
 
-Boletim diário em áudio sobre o que mudou nos jogos de realidade virtual que
-você acompanha na Steam: atualizações, promoções, prazos e movimentação de
-jogadores.
+Acompanha os jogos de realidade virtual da Steam e avisa o que mudou neles:
+promoção nova, promoção perto do fim, menor preço da história, atualização
+grande, alta ou queda de jogadores.
 
-Na Etapa 2, cada assinante recebe a própria edição: só os jogos e gêneros que
-acompanha, por e-mail, e um alerta no Telegram quando algo não pode esperar.
+Cada assinante escolhe os jogos e gêneros que quer acompanhar. Quando há
+novidade nesses jogos, recebe um e-mail curto. Se a novidade não pode esperar,
+como uma promoção que acaba amanhã, recebe também um alerta no Telegram.
 
-**AI Factory, Etapas 1 e 2 (PUCPR)** por Rafael Probst
+Projeto da disciplina AI Factory (PUCPR), por Rafael Probst.
 
----
+## Exemplo
 
-## O problema
+Um dia com o Moss II VR no menor preço da história:
 
-> A loja mostra **estado**. O que falta é **mudança**.
-
-Ninguém abre a página de cada jogo todo dia pra ver se saiu patch novo ou se
-tem mais gente jogando. No máximo você repara numa promoção, e olhe lá.
-
-O resto passa batido. Numa semana qualquer, quatro dos quinze títulos
-monitorados aqui receberam anúncio do desenvolvedor, e nenhum deles apareceu na
-vitrine da loja. Movimentação de jogadores e histórico de preço a Steam não
-mostra de jeito nenhum.
-
-Essa informação só existe comparando duas leituras no tempo. Por isso o banco
-de dados aqui não é registro, e sim o próprio produto.
-
-## Uso
-
-Duplo clique em **`Radar VR.cmd`**.
-
-| Botão | Ação |
+| Canal | O que chega |
 |---|---|
-| Fechar edição de hoje | consulta a Steam, detecta mudanças e narra o boletim |
-| Ouvir boletim | abre a narração da última edição |
-| Ler edição | abre a página com os nomes escritos e links da loja |
+| E-mail | assunto "Moss II VR no menor preço histórico"; cartão com -50%, preço cheio riscado, preço atual e "visto pela última vez em 03/2025" |
+| Telegram | 🔥 Moss II VR −50% · R$ 29,99 · menor preço histórico |
 
-Pela linha de comando:
+Quem não teve novidade nos seus jogos não recebe nada. O alerta não repete o
+e-mail; só quando o e-mail falha é que ele leva também as outras novidades do
+dia.
 
-```bash
-python src/jornal.py                 # edição completa
-python src/jornal.py --titulos 8     # watchlist reduzida
-python src/jornal.py --sem-audio     # sem síntese de voz
-```
-
-## Boletim personalizado
+## Como funciona
 
 ```
-executar_servico.cmd          microsserviço em http://127.0.0.1:8765
-executar_n8n.cmd import       importa os fluxos
-executar_n8n.cmd run          edição → personalização → e-mail → alerta
+                 n8n (orquestra)
+                       │
+   ┌───────────────────┼─────────────────────────────────────────┐
+   ▼                   ▼                   ▼                     ▼
+Gerar edição   →  Personalizar   →  Enviar e-mail   →   Alerta no Telegram
+                  por assinante                         (só se urgente)
+   │                                       │                     │
+   │                                  falhou: alerta        falhou: alerta
+   │                                  leva o resto do dia   vai por e-mail
+   ▼
+Steam + IsThereAnyDeal → compara com a leitura anterior → eventos
 ```
 
-`executar_servico.cmd teste` liga o modo DRY_RUN: o fluxo roda inteiro e
-nenhuma mensagem sai da máquina.
+O n8n decide a ordem e o que fazer quando algo falha. O trabalho em si fica
+num microsserviço Python (`src/servico.py`), que o n8n chama por HTTP:
 
-Assinantes ficam em `perfis.json`, fora do Git (modelo em
-`perfis.exemplo.json`); credenciais, no `.env` (modelo em `.env.example`).
-
-## Pipeline
-
-```
-ETAPA 1            ETAPA 2                ETAPA 3           ETAPA 4
-Steam, 5 rotas  →  detecção de eventos →  redação e voz  →  áudio, HTML,
-sem chave          + série temporal        LLM + Kokoro      CSV e SQLite
-```
-
-| Módulo | Responsabilidade |
+| Rota | O que faz |
 |---|---|
-| [`coleta.py`](src/coleta.py) | cinco rotas públicas da Steam |
-| [`historico.py`](src/historico.py) | snapshots, comparação, memória de publicação |
-| [`noticias.py`](src/noticias.py) | detecção de eventos e relevância |
-| [`redacao.py`](src/redacao.py) | redação das chamadas com LLM local |
-| [`pronuncia.py`](src/pronuncia.py) | texto escrito para texto falado |
-| [`voz.py`](src/voz.py) | roteiro e síntese com Kokoro |
-| [`boletim_html.py`](src/boletim_html.py) | edição em página |
-| [`itad.py`](src/itad.py) | menor preço da história, pela API do IsThereAnyDeal |
-| [`jornal.py`](src/jornal.py) | orquestrador da edição |
-| [`personalizacao.py`](src/personalizacao.py) | recorte, urgência e texto por assinante |
-| [`canais.py`](src/canais.py) | e-mail, Telegram e WhatsApp |
-| [`auditoria.py`](src/auditoria.py) | trilha de envios e bloqueio de repetição |
-| [`servico.py`](src/servico.py) | microsserviço HTTP chamado pelo n8n |
-| [`painel.py`](src/painel.py) | console do operador |
+| `POST /edicao` | coleta a Steam, consulta o histórico de preços, detecta o que mudou e grava a edição do dia |
+| `POST /personalizar` | monta um e-mail (e, se houver urgência, um alerta) para cada assinante |
+| `POST /enviar/email` | envia o e-mail |
+| `POST /enviar/instantaneo` | envia o alerta pelo Telegram (ou WhatsApp) |
+| `POST /falha` | registra uma falha do fluxo e avisa o operador |
+| `GET /saude` | mostra o modo e quais canais estão configurados |
 
-## Saídas
+## Como rodar
 
-| Arquivo | Finalidade |
-|---|---|
-| `audio/boletim_*.wav` | narração |
-| `data/boletim_atual.html` | leitura, com preço no formato da loja |
-| `data/jornal_vr.csv` | manchetes publicadas |
-| `data/jornal_vr.db` | série temporal, insumo da próxima edição |
-| `data/edicao_atual.json` | edição estruturada, entregue ao n8n |
-| `logs/jornal.log` | registro das etapas e das rotas |
-| `logs/auditoria.jsonl` | uma linha por decisão e por envio |
-
-Áudio e página são complementares: a narração serve para varrer o boletim sem
-tirar o headset; a página resolve o nome escrito e leva à loja por link.
-
-## Instalação
+**Instalação** (uma vez; instala Ollama, espeak-ng, o ambiente Python, os
+modelos de voz e de linguagem e o n8n, e importa os fluxos):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
-Instala Ollama, espeak-ng, o virtualenv, os modelos do Kokoro, o `llama3.1:8b`
-e o n8n, importa o fluxo e verifica cada item. É idempotente.
+**Boletim personalizado:** duplo clique em `Radar VR - n8n.cmd`. Ele pergunta o
+modo, abre o microsserviço e o n8n e leva o navegador ao editor. No n8n, abra o
+fluxo *Radar VR - Boletim personalizado* e clique em *Execute workflow*.
 
-## Decisões de projeto
+| Modo | O que acontece |
+|---|---|
+| Ensaio | o fluxo roda inteiro, mas nenhuma mensagem sai da máquina (`RADAR_DRY_RUN=1`) |
+| Real | e-mail e Telegram chegam aos assinantes de `perfis.json` |
 
-**LLM local, não API paga.** O catálogo é reprocessado a cada edição. Um modelo
-local tem custo marginal zero e não impõe limite de requisições. A RTX 5060 Ti
-comporta um modelo de 8B integralmente em VRAM.
+Cada assinante recebe no máximo uma mensagem por canal e por edição. Executar
+de novo a mesma edição não reenvia nada.
 
-**O modelo não decide fato com número.** Ele redige apenas onde há texto livre
-a resumir, que é o corpo de um anúncio. Preço, desconto e variação chegam como
-frase pronta de regra determinística, auditável e consistente entre execuções.
+**Boletim geral em áudio** (Etapa 1): duplo clique em `Radar VR.cmd` abre o
+painel com os botões *Fechar edição de hoje*, *Ouvir boletim* e *Ler edição*.
+Pela linha de comando: `python src/jornal.py` (`--sem-audio`, `--titulos 8`).
 
-**A memória de publicação não cresce.** A retenção é derivada da janela de
-detecção: um anúncio mais antigo que ela já é descartado por idade, então
-guardar seu identificador além disso não altera resultado. A tabela fica
-limitada a algumas dezenas de linhas.
+## Configuração
+
+| Arquivo | Conteúdo | No Git? |
+|---|---|---|
+| `.env` | credenciais: Gmail, Telegram, IsThereAnyDeal, WhatsApp | não (modelo em `.env.example`) |
+| `perfis.json` | assinantes: contato, jogos, gêneros, orçamento, data do consentimento | não (modelo em `perfis.exemplo.json`) |
+
+Perfil sem data de consentimento é ignorado. As demais opções (porta, modo
+ensaio, falha forçada de canal para teste) estão comentadas no `.env.example`.
+
+## Código
+
+| Módulo | Responsabilidade |
+|---|---|
+| [`coleta.py`](src/coleta.py) | consulta à Steam: busca, ficha da loja, jogadores, avaliações e anúncios |
+| [`itad.py`](src/itad.py) | menor preço da história, pela API do IsThereAnyDeal |
+| [`historico.py`](src/historico.py) | leituras anteriores em SQLite, para comparar |
+| [`noticias.py`](src/noticias.py) | detecção dos eventos e ordem de importância |
+| [`redacao.py`](src/redacao.py) | resumo dos anúncios dos desenvolvedores com LLM local (Ollama) |
+| [`voz.py`](src/voz.py), [`pronuncia.py`](src/pronuncia.py) | narração do boletim geral (Kokoro) |
+| [`boletim_html.py`](src/boletim_html.py) | página do boletim geral |
+| [`jornal.py`](src/jornal.py) | gera uma edição completa |
+| [`personalizacao.py`](src/personalizacao.py) | o que interessa a cada assinante, urgência e texto das mensagens |
+| [`canais.py`](src/canais.py) | envio por e-mail, Telegram e WhatsApp, com novas tentativas |
+| [`auditoria.py`](src/auditoria.py) | registro de cada envio e bloqueio de repetição |
+| [`servico.py`](src/servico.py) | microsserviço HTTP chamado pelo n8n |
+| [`painel.py`](src/painel.py) | painel do boletim geral |
+
+Fluxos do n8n em [`n8n/`](n8n): o boletim personalizado, o tratamento de
+falhas e o boletim geral da Etapa 1.
+
+## Testes de carga
+
+`python testes/estresse.py` roda os cenários em modo ensaio, com assinantes
+fictícios. Principais resultados (detalhes em
+[docs/07_testes.md](docs/07_testes.md)):
+
+| Gargalo | Antes | Depois |
+|---|---:|---:|
+| Coleta na Steam, sequencial → 4 em paralelo | 29,8 s | 19,3 s |
+| Envios por segundo, banco reaberto a cada envio → conexão única | 28,6 | 185 |
+| Telegram esperando o IPv6 → IPv4 direto | 23 a 44 s | 1,8 s |
+| Personalização de 100 assinantes, LLM → regra | 164 s | 0,03 s |
+| Edição com o Ollama desligado | abortava | 2,1 s |
+
+## Limitações
+
+- **WhatsApp:** integrado pela API oficial da Meta, mas a Meta recusa a entrega
+  para números do Brasil vindos de remetente estrangeiro (erro 130497), caso
+  do número de teste. O Telegram cumpre o papel até haver um número brasileiro
+  dedicado. Ver [docs/06_canais.md](docs/06_canais.md).
+- **Volume de e-mail:** o Gmail aceita cerca de 500 envios por dia.
+- **Cancelamento:** o pedido de saída chega por e-mail ao operador, que remove
+  o perfil à mão.
+- **Execução local:** roda no computador do operador; a versão pública na web
+  é o próximo passo.
 
 ## Documentação
 
 | Documento | Conteúdo |
 |---|---|
-| [Diagnóstico](docs/01_diagnostico.md) | problema, dados, causas e oportunidades |
+| [Diagnóstico](docs/01_diagnostico.md) | problema, dados disponíveis e oportunidades |
 | [Canvas](docs/02_canvas.md) | objetivos, escopo, riscos e critérios |
-| [Arquitetura](docs/03_arquitetura.md) | módulos, eventos, limiares e saídas |
-| [Ambiente](docs/04_ambiente.md) | stack, instalação e evidências de execução |
+| [Arquitetura](docs/03_arquitetura.md) | módulos, eventos e limiares |
+| [Ambiente](docs/04_ambiente.md) | instalação e evidências da Etapa 1 |
 | [n8n](docs/05_n8n.md) | fluxos, passagem de dados e contingência |
-| [Microsserviço e canais](docs/06_canais.md) | rotas, personalização, canais e erros |
-| [Testes de carga](docs/07_testes.md) | gargalos, melhorias e números antes e depois |
+| [Microsserviço e canais](docs/06_canais.md) | rotas, personalização e tratamento de erros |
+| [Testes de carga](docs/07_testes.md) | gargalos, melhorias e números |
 
 ---
 
 Preços históricos: [IsThereAnyDeal](https://isthereanydeal.com). Preços,
 jogadores e anúncios: Steam.
-
