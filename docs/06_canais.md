@@ -196,6 +196,7 @@ fluxos do n8n, que leem `RADAR_SERVICO_URL` e `RADAR_DIR_LOGS` por `$env`.
 | Variável | Efeito |
 |---|---|
 | `RADAR_DRY_RUN` | nenhuma mensagem sai da máquina e o histórico não é gravado; usado no ensaio e nos testes de carga |
+| `RADAR_HISTORICO_FIXO` | a edição não grava no histórico, e as mesmas novidades se repetem a cada execução; serve para ensaiar com envio real |
 | `RADAR_FALHAR_CANAIS` | força falha de um canal para exercitar os desvios de erro |
 | `RADAR_OPERADOR_TELEGRAM` | chat do operador, para o aviso de falha quando o e-mail não sai |
 | `RADAR_COLETA_PARALELA` | coletas simultâneas na Steam |

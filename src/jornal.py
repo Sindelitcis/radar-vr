@@ -112,8 +112,9 @@ def publicar(titulos=None, gerar_audio=True, extras=()):
     selecionados, todos = noticias.detectar(conexao, catalogo, anterior)
     # O ensaio nao altera o historico: senao cada ensaio consumiria as
     # novidades do dia, e a execucao real nao teria o que enviar.
-    if config.DRY_RUN:
-        log.info("Ensaio: leituras e anúncios não são gravados no histórico")
+    if config.HISTORICO_FIXO:
+        log.log(logging.INFO if config.DRY_RUN else logging.DEBUG,
+                "Histórico fixo: leituras e anúncios não são gravados")
     else:
         historico.gravar_snapshot(conexao, catalogo)
     passo = marcar("deteccao", passo)
@@ -148,7 +149,7 @@ def publicar(titulos=None, gerar_audio=True, extras=()):
     )
 
     marcados = podados = 0
-    if not config.DRY_RUN:
+    if not config.HISTORICO_FIXO:
         historico.registrar_edicao(
             conexao, len(catalogo), len(todos), caminho_audio, pagina.name
         )

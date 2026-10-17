@@ -129,6 +129,11 @@ ARQ_PERFIS = RAIZ / _env("RADAR_PERFIS", "perfis.json")
 # como simulado. Os testes de carga dependem disso.
 DRY_RUN = _env_bool("RADAR_DRY_RUN")
 
+# Com o historico fixo a edicao compara sempre com a mesma leitura e nao grava
+# outra: as mesmas novidades se repetem a cada execucao, o que serve para
+# ensaiar com envio real. O ensaio (DRY_RUN) ja implica historico fixo.
+HISTORICO_FIXO = DRY_RUN or _env_bool("RADAR_HISTORICO_FIXO")
+
 # Canais que devem falhar de proposito, para exercitar os desvios de erro em teste.
 # Exemplo: RADAR_FALHAR_CANAIS=telegram
 FALHAR_CANAIS = {c.strip() for c in _env("RADAR_FALHAR_CANAIS").split(",") if c.strip()}
