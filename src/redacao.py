@@ -12,6 +12,7 @@ apuracao, nao redacao.
 import json
 import logging
 import re
+import time
 
 import requests
 
@@ -47,13 +48,30 @@ FATO: {resumo}
 {extra}"""
 
 
-def _chamar(prompt):
+# Disjuntor: se o Ollama recusa conexao, as chamadas seguintes falham na hora
+# durante PAUSA_DISJUNTOR_S em vez de esperar o timeout de TCP uma a uma.
+PAUSA_DISJUNTOR_S = 60
+_fora_do_ar_ate = 0.0
+
+
+def chamar(prompt, sistema=SISTEMA):
+    global _fora_do_ar_ate
+    if time.monotonic() < _fora_do_ar_ate:
+        raise ConnectionError("Ollama indisponível (disjuntor aberto)")
+    try:
+        return _chamar(prompt, sistema)
+    except requests.ConnectionError:
+        _fora_do_ar_ate = time.monotonic() + PAUSA_DISJUNTOR_S
+        raise
+
+
+def _chamar(prompt, sistema):
     resposta = requests.post(
         f"{config.OLLAMA_URL}/api/generate",
         json={
             "model": config.OLLAMA_MODELO,
             "prompt": prompt,
-            "system": SISTEMA,
+            "system": sistema,
             "stream": False,
             "format": "json",
             "options": {"temperature": config.OLLAMA_TEMP},
@@ -64,7 +82,7 @@ def _chamar(prompt):
     return resposta.json().get("response", "")
 
 
-def _extrair_json(texto):
+def extrair_json(texto):
     try:
         return json.loads(texto)
     except json.JSONDecodeError:
@@ -98,7 +116,7 @@ def _redigir_um(evento):
         resumo=evento["resumo"],
         extra=f"TEXTO DO ANUNCIO: {dados['texto'][:400]}" if dados.get("texto") else "",
     )
-    parecer = _extrair_json(_chamar(prompt)) or {}
+    parecer = extrair_json(chamar(prompt)) or {}
     return parecer.get("linha", "").strip()
 
 

@@ -10,6 +10,7 @@ Uso:
 """
 import argparse
 import csv
+import json
 import logging
 import sys
 import time
@@ -19,6 +20,7 @@ import boletim_html
 import coleta
 import config
 import historico
+import itad
 import noticias
 import redacao
 import voz
@@ -63,9 +65,25 @@ def gravar_csv(eventos):
             })
 
 
-def executar(titulos=None, gerar_audio=True):
-    log = configurar_log()
-    inicio = time.time()
+def _resumo_jogo(jogo):
+    campos = ("appid", "nome", "preco", "preco_cheio", "preco_num", "desconto",
+              "generos", "jogadores_online", "aprovacao_pct", "url", "itad")
+    return {c: jogo.get(c) for c in campos}
+
+
+def publicar(titulos=None, gerar_audio=True, extras=()):
+    """Gera uma edicao completa e devolve seu conteudo estruturado.
+
+    O dicionario devolvido e o contrato com o microsservico e o n8n; a mesma
+    estrutura fica gravada em data/edicao_atual.json.
+    """
+    log = logging.getLogger("jornal")
+    inicio = time.perf_counter()
+    tempos = {}
+
+    def marcar(etapa, desde):
+        tempos[etapa] = round(time.perf_counter() - desde, 2)
+        return time.perf_counter()
 
     log.info("=" * 72)
     log.info("RADAR VR | %s", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
@@ -80,19 +98,27 @@ def executar(titulos=None, gerar_audio=True):
     else:
         log.info("Comparando com a leitura de %s", momento)
 
-    catalogo = coleta.coletar(titulos)
+    passo = time.perf_counter()
+    catalogo = coleta.coletar(titulos, extras)
+    passo = marcar("coleta", passo)
     if not catalogo:
-        log.error("Nenhum título coletado. Edição abortada.")
         conexao.close()
-        return 1
+        raise RuntimeError("Nenhum título coletado. Edição abortada.")
+
+    itad.enriquecer(catalogo)
+    passo = marcar("historico_precos", passo)
 
     selecionados, todos = noticias.detectar(conexao, catalogo, anterior)
     historico.gravar_snapshot(conexao, catalogo)
+    passo = marcar("deteccao", passo)
 
     if selecionados:
         redacao.redigir(selecionados)
     else:
         log.info("=== ETAPA 3/4 | Sem eventos para redigir ===")
+    for evento in todos:
+        evento.setdefault("linha", f"{evento['nome']} {evento['resumo']}")
+    passo = marcar("redacao", passo)
 
     roteiro = voz.montar_roteiro(selecionados, len(catalogo), primeira_edicao)
     (config.DIR_AUDIO / "ultimo_boletim.txt").write_text(roteiro, encoding="utf-8")
@@ -105,7 +131,8 @@ def executar(titulos=None, gerar_audio=True):
         except Exception as erro:
             log.error("Síntese de voz falhou: %s", erro)
     else:
-        log.info("=== Síntese de voz ignorada (--sem-audio) ===")
+        log.info("=== Síntese de voz ignorada ===")
+    passo = marcar("voz", passo)
 
     log.info("=== ETAPA 4/4 | Publicação ===")
     gravar_csv(selecionados)
@@ -124,14 +151,33 @@ def executar(titulos=None, gerar_audio=True):
     ).fetchone()[0]
     leituras = conexao.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     conexao.close()
+    marcar("publicacao", passo)
+    tempos["total"] = round(time.perf_counter() - inicio, 2)
 
     log.info("  SQLite -> %s (%d leituras acumuladas)", config.ARQ_DB.name, leituras)
     log.info("  Memória-> %d anúncios marcados, %d expirados, %d retidos",
              marcados, podados, memoria)
 
+    agora = datetime.now()
+    edicao = {
+        "id": agora.strftime("%Y-%m-%dT%H-%M-%S"),
+        "publicada_em": agora.isoformat(timespec="seconds"),
+        "primeira_edicao": primeira_edicao,
+        "titulos_observados": len(catalogo),
+        "manchetes": selecionados,
+        "eventos": todos,
+        "catalogo": [_resumo_jogo(j) for j in catalogo],
+        "audio": caminho_audio,
+        "pagina": pagina.name,
+        "tempos": tempos,
+    }
+    config.ARQ_EDICAO.write_text(
+        json.dumps(edicao, ensure_ascii=False, indent=1, default=str), encoding="utf-8"
+    )
+
     log.info("=" * 72)
-    log.info("EDIÇÃO PUBLICADA em %.1f s", time.time() - inicio)
-    log.info("  Coleta ..... %d títulos observados", len(catalogo))
+    log.info("EDIÇÃO PUBLICADA em %.1f s", tempos["total"])
+    log.info("  Coleta ..... %d títulos observados (%.1f s)", len(catalogo), tempos["coleta"])
     log.info("  Eventos .... %d detectados, %d no boletim", len(todos),
              len(selecionados))
     log.info("  Voz ........ %s (%.1f s, voz %s)",
@@ -139,17 +185,27 @@ def executar(titulos=None, gerar_audio=True):
     log.info("  Publicação . %s + %s + %s",
              config.ARQ_CSV.name, config.ARQ_DB.name, pagina.name)
     log.info("=" * 72)
+    return edicao
+
+
+def executar(titulos=None, gerar_audio=True):
+    log = configurar_log()
+    try:
+        edicao = publicar(titulos, gerar_audio)
+    except RuntimeError as erro:
+        log.error("%s", erro)
+        return 1
 
     print("\nEDIÇÃO DE HOJE")
     print("-" * 72)
-    if not selecionados:
+    if not edicao["manchetes"]:
         print("  Catálogo estável: nenhuma movimentação relevante.")
-    for posicao, evento in enumerate(selecionados, 1):
+    for posicao, evento in enumerate(edicao["manchetes"], 1):
         marca = "MANCHETE" if posicao == 1 else evento["secao"].upper()
         print(f"  [{marca:<9}] {evento.get('linha', evento['resumo'])[:78]}")
     print("-" * 72)
-    if caminho_audio:
-        print(f"  Áudio ...: audio/{caminho_audio}")
+    if edicao["audio"]:
+        print(f"  Áudio ...: audio/{edicao['audio']}")
     print(f"  Leitura .: data/{config.ARQ_HTML.name}")
     print(f"  Planilha : data/{config.ARQ_CSV.name}")
     return 0

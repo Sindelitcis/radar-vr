@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ana",
+    "nome": "Ana",
+    "email": "ana@exemplo.com",
+    "instantaneo": {"canal": "telegram", "destino": "123456789"},
+    "jogos": [546560, 629730],
+    "generos": ["Ação", "Aventura"],
+    "orcamento": 60,
+    "consentimento": "2026-10-01"
+  },
+  {
+    "id": "bruno",
+    "nome": "Bruno",
+    "email": "bruno@exemplo.com",
+    "instantaneo": {"canal": "whatsapp", "destino": "5511999998888"},
+    "jogos": [1104380],
+    "generos": ["Casual"],
+    "orcamento": 40,
+    "consentimento": "2026-10-01"
+  }
+]

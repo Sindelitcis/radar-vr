@@ -91,8 +91,10 @@ if (Get-Command n8n -ErrorAction SilentlyContinue) {
 if (Get-Command n8n -ErrorAction SilentlyContinue) {
     $env:N8N_ENCRYPTION_KEY = "radar-vr-pucpr-etapa1"
     $env:N8N_DIAGNOSTICS_ENABLED = "false"
-    n8n import:workflow --input="n8n\fluxo_radar_vr.json" 2>&1 |
-        Select-String -Pattern "imported|error" | ForEach-Object { "    $_" }
+    foreach ($fluxo in "fluxo_falhas", "fluxo_boletim_personalizado", "fluxo_radar_vr") {
+        n8n import:workflow --input="n8n\$fluxo.json" 2>&1 |
+            Select-String -Pattern "imported|error" | ForEach-Object { "    $fluxo`: $_" }
+    }
 }
 
 # ----------------------------------------------------------- 7. verificacao
@@ -108,9 +110,9 @@ function Checar($rotulo, $condicao) {
 }
 
 Checar "Python venv"          (Test-Path $py)
-Checar "requests"             (& $py -c "import requests" 2>$null; $LASTEXITCODE -eq 0)
-Checar "kokoro-onnx"          (& $py -c "import kokoro_onnx" 2>$null; $LASTEXITCODE -eq 0)
-Checar "soundfile"            (& $py -c "import soundfile" 2>$null; $LASTEXITCODE -eq 0)
+Checar "requests"             $(& $py -c "import requests" 2>$null; $LASTEXITCODE -eq 0)
+Checar "kokoro-onnx"          $(& $py -c "import kokoro_onnx" 2>$null; $LASTEXITCODE -eq 0)
+Checar "soundfile"            $(& $py -c "import soundfile" 2>$null; $LASTEXITCODE -eq 0)
 Checar "modelo kokoro"        (Test-Path (Join-Path $dirModelos "kokoro-v1.0.onnx"))
 Checar "vozes kokoro"         (Test-Path (Join-Path $dirModelos "voices-v1.0.bin"))
 Checar "espeak-ng"            (Test-Path "C:\Program Files\eSpeak NG\espeak-ng.exe")

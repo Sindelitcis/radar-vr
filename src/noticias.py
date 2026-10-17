@@ -128,6 +128,30 @@ def _eventos_de_preco(conexao, jogo, antes):
                 },
             ))
 
+    # O historico do ITAD cobre anos de precos e vale desde a primeira edicao.
+    # A serie propria fica como alternativa quando o jogo nao esta no ITAD.
+    itad = jogo.get("itad")
+    if itad and desconto and preco <= itad["menor_preco"] * config.ITAD_MARGEM_MINIMO:
+        quando = itad["data_menor"]
+        data = f" de {quando[5:7]}/{quando[:4]}" if quando else ""
+        # O ITAD atualiza o recorde quando a promocao atual o bate; nesse caso
+        # a data do recorde e a desta propria oferta.
+        recente = quando and (datetime.now() - datetime.fromisoformat(quando)).days <= 14
+        if recente:
+            resumo = f"está por {jogo['preco']}, o menor preço da história do jogo"
+        elif preco < itad["menor_preco"]:
+            resumo = (f"está por {jogo['preco']}, abaixo do recorde anterior"
+                      f"{data}, de {_reais(itad['menor_preco'])}")
+        else:
+            resumo = f"está por {jogo['preco']}, igual ao menor preço da história{data}"
+        eventos.append(_evento(
+            "PRECO_MINIMO", jogo,
+            resumo,
+            PESOS["PRECO_MINIMO"] + desconto / 4,
+            {"menor_historico": itad["menor_preco"], "fonte": "IsThereAnyDeal"},
+        ))
+        return eventos
+
     # Comparacao estrita: preco igual ao minimo ja visto nao e fato novo.
     minimo = historico.preco_minimo_visto(conexao, jogo["appid"])
     if minimo is not None and preco < minimo and desconto:

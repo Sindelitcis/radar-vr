@@ -15,6 +15,35 @@ ARQ_CSV = DIR_DADOS / "jornal_vr.csv"
 ARQ_DB = DIR_DADOS / "jornal_vr.db"
 ARQ_LOG = DIR_LOGS / "jornal.log"
 ARQ_HTML = DIR_DADOS / "boletim_atual.html"
+ARQ_EDICAO = DIR_DADOS / "edicao_atual.json"
+ARQ_AUDITORIA = DIR_LOGS / "auditoria.jsonl"
+
+
+def _carregar_env(caminho):
+    """Le um arquivo .env simples. Variaveis ja definidas no ambiente vencem."""
+    if not caminho.exists():
+        return
+    for linha in caminho.read_text(encoding="utf-8").splitlines():
+        linha = linha.strip()
+        if not linha or linha.startswith("#") or "=" not in linha:
+            continue
+        chave, valor = linha.split("=", 1)
+        os.environ.setdefault(chave.strip(), valor.strip().strip('"'))
+
+
+_carregar_env(RAIZ / ".env")
+
+if os.environ.get("RADAR_DB"):  # os testes de carga usam um banco separado
+    ARQ_DB = DIR_DADOS / os.environ["RADAR_DB"]
+
+
+def _env(chave, padrao=""):
+    return os.environ.get(chave, padrao)
+
+
+def _env_bool(chave, padrao=False):
+    return _env(chave, str(padrao)).lower() in ("1", "true", "sim", "yes")
+
 
 # O phonemizer PT-BR do Kokoro localiza a biblioteca do espeak-ng por variavel
 # de ambiente. Definir aqui dispensa configurar o terminal antes de executar.
@@ -64,7 +93,8 @@ EDICOES_PARA_MINIMA_HISTORICA = 5
 RETENCAO_NOTICIAS_DIAS = NOTICIA_RECENTE_DIAS * 2
 
 # ------------------------------------------------------------- LLM local
-OLLAMA_URL = "http://127.0.0.1:11434"  # IP literal: Node resolve localhost como ::1
+# IP literal: o Node do n8n resolve localhost como ::1
+OLLAMA_URL = _env("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODELO = "llama3.1:8b"
 OLLAMA_TEMP = 0.2  # classificacao exige consistencia entre execucoes
 OLLAMA_TIMEOUT = 180
@@ -77,3 +107,48 @@ KOKORO_IDIOMA = "pt-br"
 KOKORO_VELOCIDADE = 1.0
 KOKORO_VOZ_FALLBACK = "af_heart"
 KOKORO_IDIOMA_FALLBACK = "en-us"
+
+# ---------------------------------------------------- historico de precos
+ITAD_URL = "https://api.isthereanydeal.com"
+ITAD_API_KEY = _env("ITAD_API_KEY")
+ITAD_LOJA_STEAM = 61
+ITAD_CACHE_HORAS = 6
+# Preco atual ate 5% acima do menor historico ainda conta como "no minimo":
+# a loja arredonda centavos e o cambio oscila entre leituras.
+ITAD_MARGEM_MINIMO = 1.05
+
+# ------------------------------------------------------------ microsservico
+SERVICO_HOST = _env("RADAR_HOST", "127.0.0.1")
+SERVICO_PORTA = int(_env("RADAR_PORTA", "8765"))
+ARQ_PERFIS = RAIZ / _env("RADAR_PERFIS", "perfis.json")
+
+# Com DRY_RUN ligado nenhuma mensagem sai da maquina; o envio e registrado
+# como simulado. Os testes de carga dependem disso.
+DRY_RUN = _env_bool("RADAR_DRY_RUN")
+
+# Canais que devem falhar de proposito, para exercitar a contingencia em teste.
+# Exemplo: RADAR_FALHAR_CANAIS=telegram
+FALHAR_CANAIS = {c.strip() for c in _env("RADAR_FALHAR_CANAIS").split(",") if c.strip()}
+
+COLETA_PARALELA = int(_env("RADAR_COLETA_PARALELA", "4"))
+PERSONALIZACAO_PARALELA = int(_env("RADAR_PERSONALIZACAO_PARALELA", "4"))
+CACHE_REDACAO = _env_bool("RADAR_CACHE_REDACAO", True)
+
+# --------------------------------------------------------------- canais
+GMAIL_USER = _env("GMAIL_USER")
+GMAIL_APP_PASSWORD = _env("GMAIL_APP_PASSWORD")
+SMTP_HOST = _env("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORTA = int(_env("SMTP_PORTA", "465"))
+
+TELEGRAM_TOKEN = _env("TELEGRAM_TOKEN")
+
+WHATSAPP_TOKEN = _env("WHATSAPP_TOKEN")
+WHATSAPP_PHONE_ID = _env("WHATSAPP_PHONE_ID")
+WHATSAPP_API = "https://graph.facebook.com/v25.0"
+
+# A rota IPv6 ate api.telegram.org nao responde nesta rede: cada conexao nova
+# espera 21 s pelo timeout antes de cair para IPv4. Ver docs/07_testes.md.
+FORCAR_IPV4 = _env_bool("RADAR_FORCAR_IPV4", True)
+
+TENTATIVAS_ENVIO = 3
+ESPERA_BASE_S = 1.5  # backoff exponencial: 1,5 s e depois 3 s

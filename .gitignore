@@ -15,7 +15,11 @@ data/boletim_*.html
 data/boletim_atual.html
 data/jornal_vr.csv
 data/jornal_vr.db
+data/*.db
+data/*.db-*
+data/edicao_atual.json
 logs/*.log
+logs/*.jsonl
 
 # Sistema
 Thumbs.db
@@ -26,3 +30,13 @@ desktop.ini
 # avaliado sem precisar executar o pipeline.
 !evidencias/
 !evidencias/*
+
+# Credenciais locais - nunca versionar
+.env
+setup.log
+
+# Assinantes reais (dado pessoal)
+perfis.json
+
+# Material de entrega (PDF, roteiro do video)
+entrega/

@@ -10,7 +10,9 @@ Cinco rotas publicas, nenhuma exige chave de autenticacao:
 """
 import logging
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import requests
@@ -207,60 +209,95 @@ def buscar_fim_promocao(appid):
         return None
 
 
-def montar_watchlist(tamanho=None):
+def montar_watchlist(tamanho=None, extras=()):
     """Conjunto observado, ordenado por volume de avaliacoes.
 
     Nao filtra por promocao: a lista precisa ser a mesma amanha para que a
-    comparacao entre edicoes tenha significado.
+    comparacao entre edicoes tenha significado. `extras` sao appids seguidos
+    pelos assinantes que nao estao entre os mais avaliados.
     """
     tamanho = tamanho or config.TAM_WATCHLIST
     log.info("Montando watchlist de %d títulos", tamanho)
-    return descobrir_jogos_vr(tamanho)
+    jogos = descobrir_jogos_vr(tamanho)
+    presentes = {appid for appid, _ in jogos}
+    adicionais = [(a, "") for a in dict.fromkeys(extras) if a not in presentes]
+    if adicionais:
+        log.info("  + %d títulos seguidos por assinantes", len(adicionais))
+    return jogos + adicionais
 
 
-def coletar(tamanho=None):
-    """Executa a etapa de coleta e devolve o catalogo normalizado."""
-    log.info("=== ETAPA 1/4 | Coleta do catálogo VR ===")
+class _Ritmo:
+    """Intervalo minimo entre chamadas ao appdetails, compartilhado entre threads.
+
+    O limite da Steam e por IP, nao por conexao: paralelizar sem coordenar o
+    ritmo so anteciparia o bloqueio.
+    """
+
+    def __init__(self, intervalo):
+        self.intervalo = intervalo
+        self.proxima = 0.0
+        self.trava = threading.Lock()
+
+    def aguardar(self):
+        with self.trava:
+            agora = time.monotonic()
+            espera = max(0.0, self.proxima - agora)
+            self.proxima = max(agora, self.proxima) + self.intervalo
+        if espera:
+            time.sleep(espera)
+
+
+def _coletar_jogo(appid, nome, ritmo):
+    ritmo.aguardar()
     try:
-        watchlist = montar_watchlist(tamanho)
+        ficha = detalhar_jogo(appid)
+    except Exception as erro:
+        log.warning("Ignorando %s (%s): %s", nome or appid, appid, erro)
+        return None
+
+    preco, valor, desconto, preco_cheio = _formatar_preco(
+        ficha.get("price_overview"), ficha.get("is_free", False)
+    )
+    jogo = {
+        "appid": appid,
+        "nome": ficha.get("name", nome),
+        "preco": preco,
+        "preco_cheio": preco_cheio,
+        "preco_num": valor,
+        "desconto": desconto,
+        "descricao": _limpar_html(ficha.get("short_description", ""))[:400],
+        "generos": ", ".join(g["description"] for g in ficha.get("genres", [])),
+        "jogadores_online": contar_jogadores(appid),
+        "url": f"https://store.steampowered.com/app/{appid}",
+        "noticias": buscar_noticias(appid),
+        # consultar o fim da promocao so faz sentido para quem esta em oferta
+        "fim_promocao": buscar_fim_promocao(appid) if desconto else None,
+        **buscar_avaliacoes(appid),
+    }
+    log.info(
+        "  + %-30s %-10s online:%-7s %d avisos",
+        jogo["nome"][:30], jogo["preco"], jogo["jogadores_online"],
+        sum(1 for n in jogo["noticias"] if n["oficial"]),
+    )
+    return jogo
+
+
+def coletar(tamanho=None, extras=(), paralelo=None):
+    """Executa a etapa de coleta e devolve o catalogo normalizado."""
+    paralelo = paralelo or config.COLETA_PARALELA
+    log.info("=== ETAPA 1/4 | Coleta do catálogo VR (%d em paralelo) ===", paralelo)
+    try:
+        watchlist = montar_watchlist(tamanho, extras)
     except Exception as erro:
         log.error("Falha ao montar a watchlist: %s", erro)
         return []
 
-    catalogo = []
-    for appid, nome in watchlist:
-        time.sleep(config.PAUSA_REQ)
-        try:
-            ficha = detalhar_jogo(appid)
-        except Exception as erro:
-            log.warning("Ignorando %s (%s): %s", nome, appid, erro)
-            continue
-
-        preco, valor, desconto, preco_cheio = _formatar_preco(
-            ficha.get("price_overview"), ficha.get("is_free", False)
-        )
-        jogo = {
-            "appid": appid,
-            "nome": ficha.get("name", nome),
-            "preco": preco,
-            "preco_cheio": preco_cheio,
-            "preco_num": valor,
-            "desconto": desconto,
-            "descricao": _limpar_html(ficha.get("short_description", ""))[:400],
-            "generos": ", ".join(g["description"] for g in ficha.get("genres", [])),
-            "jogadores_online": contar_jogadores(appid),
-            "url": f"https://store.steampowered.com/app/{appid}",
-            "noticias": buscar_noticias(appid),
-            # consultar o fim da promocao so faz sentido para quem esta em oferta
-            "fim_promocao": buscar_fim_promocao(appid) if desconto else None,
-            **buscar_avaliacoes(appid),
-        }
-        catalogo.append(jogo)
-        log.info(
-            "  + %-30s %-10s online:%-7s %d avisos",
-            jogo["nome"][:30], jogo["preco"], jogo["jogadores_online"],
-            sum(1 for n in jogo["noticias"] if n["oficial"]),
-        )
+    ritmo = _Ritmo(config.PAUSA_REQ)
+    with ThreadPoolExecutor(max_workers=paralelo) as executor:
+        resultados = list(executor.map(
+            lambda par: _coletar_jogo(par[0], par[1], ritmo), watchlist
+        ))
+    catalogo = [j for j in resultados if j]
 
     log.info("Etapa 1 concluída: %d títulos observados", len(catalogo))
     return catalogo
