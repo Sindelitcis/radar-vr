@@ -5,9 +5,10 @@ Cinco rotas publicas, nenhuma exige chave de autenticacao:
     /search/results              descoberta de titulos com suporte a VR
     /api/appdetails              ficha da loja: preco, generos, descricao
     GetNumberOfCurrentPlayers    jogadores simultaneos
-    /appreviews/<appid>          resumo das avaliacoes da comunidade
+    GetAppReviews                resumo das avaliacoes da comunidade
     /app/<appid>                 pagina da loja, para o fim da promocao
 """
+import json
 import logging
 import re
 import threading
@@ -115,20 +116,27 @@ def contar_jogadores(appid):
 
 
 def buscar_avaliacoes(appid):
-    """Percentual de aprovacao e volume de avaliacoes da comunidade."""
+    """Percentual de aprovacao e volume de avaliacoes da comunidade.
+
+    A rota nova nao aceita pagina vazia: devolve ao menos uma avaliacao, com o
+    identificador de quem escreveu. So o resumo com os totais e lido aqui; a
+    lista de avaliacoes e descartada e nunca e gravada.
+    """
     vazio = {"aprovacao_pct": None, "total_reviews": 0, "review_desc": "sem dados"}
+    consulta = {"appid": int(appid), "languages": ["all"], "purchase_type": 1,
+                "num_per_page": 1}
     try:
-        dados = _get(
-            f"{config.STEAM_AVALIACOES}{appid}",
-            {"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0},
-        )
+        dados = _get(config.STEAM_AVALIACOES, {"input_json": json.dumps(consulta)})
     except Exception as erro:
         log.warning("Sem avaliações para %s: %s", appid, erro)
         return vazio
 
-    resumo = dados.get("query_summary", {})
+    resumo = dados.get("response", dados).get("query_summary") or {}
     total = resumo.get("total_reviews", 0)
     positivas = resumo.get("total_positive", 0)
+    if not total:
+        log.warning("Sem avaliações para %s: resposta sem totais", appid)
+        return vazio
     return {
         "aprovacao_pct": round(positivas / total * 100, 1) if total else None,
         "total_reviews": total,

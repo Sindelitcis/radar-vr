@@ -39,7 +39,7 @@ variação a reportar.
 | `/search/results` | Descoberta de títulos com suporte a VR |
 | `/api/appdetails` | Preço final, preço cheio, desconto, gêneros |
 | `GetNumberOfCurrentPlayers` | Jogadores simultâneos |
-| `/appreviews/<appid>` | Aprovação e volume de avaliações |
+| `IUserReviewsService/GetAppReviews` | Aprovação e volume de avaliações (até outubro de 2026, `/appreviews/<appid>`, desligada pela Steam) |
 | `ISteamNews/GetNewsForApp` | Anúncios do desenvolvedor |
 
 Nenhuma exige chave de autenticação.

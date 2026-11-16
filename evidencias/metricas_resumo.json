@@ -1,0 +1,188 @@
+{
+ "gerado_em": "2026-11-15T08:32:53",
+ "periodo": [
+  "2026-11-12T23:40:36",
+  "2026-11-14T23:30:02"
+ ],
+ "execucoes": 96,
+ "concluidas": 96,
+ "falhas": 0,
+ "taxa_sucesso_pct": 100.0,
+ "por_origem": {
+  "agendada": 49,
+  "campanha": 42,
+  "real": 5
+ },
+ "fluxo": {
+  "n": 91,
+  "p50_s": 40.199,
+  "p95_s": 57.837,
+  "etapas_p50_s": {
+   "coleta": 20.8,
+   "historico_precos": 1.0,
+   "redacao": 3.42,
+   "voz": 15.46
+  }
+ },
+ "fluxo_real": {
+  "n": 5,
+  "p50_s": 59.183,
+  "p95_s": 59.3656,
+  "etapas_p50_s": {
+   "coleta": 19.94,
+   "historico_precos": 1.4,
+   "redacao": 1.4,
+   "voz": 14.18
+  }
+ },
+ "modelo_carregado": {
+  "n": 41,
+  "p50_s": 38.348,
+  "p95_s": 40.445,
+  "etapas_p50_s": {
+   "coleta": 20.91,
+   "historico_precos": 1.4,
+   "redacao": 1.5,
+   "voz": 14.64
+  }
+ },
+ "modelo_frio": {
+  "n": 50,
+  "p50_s": 41.614,
+  "p95_s": 64.61085,
+  "etapas_p50_s": {
+   "coleta": 20.8,
+   "historico_precos": 0.63,
+   "redacao": 3.7699999999999996,
+   "voz": 15.85
+  }
+ },
+ "completas_antes_correcao": {
+  "n": 43,
+  "completas": 0
+ },
+ "completas_depois_correcao": {
+  "n": 53,
+  "completas": 52
+ },
+ "envio": {
+  "email": {
+   "enviados": 34,
+   "falhas": 0,
+   "novembro": 10,
+   "outubro": 24,
+   "p50_s": 21.511000000000003,
+   "p95_s": 24.461750000000002
+  },
+  "telegram": {
+   "enviados": 18,
+   "falhas": 0,
+   "novembro": 0,
+   "outubro": 18,
+   "p50_s": 1.0979999999999999,
+   "p95_s": 1.12205
+  }
+ },
+ "gpu_w_medio": 31.425,
+ "cpu_ocupada_p50_pct": 21.5,
+ "roi": {
+  "energia_reais_ano": 0.5892183778784723,
+  "watts_considerados": 131.425,
+  "manutencao_h_ano": 6.0,
+  "cenarios": [
+   {
+    "nome": "Hoje: só o autor usa",
+    "minutos_manuais": 15,
+    "minutos_por_dia": 14,
+    "assinantes": 1,
+    "ganho_h": 85.16666666666667,
+    "custo_h": 26.0,
+    "ganho_reais": 627.6783333333334,
+    "custo_reais": 192.20921837787847,
+    "roi_pct": 226.55995307120685,
+    "payback_dias": 92.21052631578947
+   },
+   {
+    "nome": "Conferência manual mais rápida",
+    "minutos_manuais": 5,
+    "minutos_por_dia": 4,
+    "assinantes": 1,
+    "ganho_h": 24.333333333333332,
+    "custo_h": 26.0,
+    "ganho_reais": 179.33666666666667,
+    "custo_reais": 192.20921837787847,
+    "roi_pct": -6.6971562653694825,
+    "payback_dias": 398.1818181818182
+   },
+   {
+    "nome": "Hora de desenvolvimento valendo 3 vezes mais",
+    "minutos_manuais": 15,
+    "minutos_por_dia": 14,
+    "assinantes": 1,
+    "ganho_h": 85.16666666666667,
+    "custo_h": 66.0,
+    "ganho_reais": 627.6783333333334,
+    "custo_reais": 487.0092183778785,
+    "roi_pct": 28.884281785053897,
+    "payback_dias": 276.6315789473684
+   },
+   {
+    "nome": "Dez assinantes (hipótese)",
+    "minutos_manuais": 15,
+    "minutos_por_dia": 14,
+    "assinantes": 10,
+    "ganho_h": 851.6666666666667,
+    "custo_h": 26.0,
+    "ganho_reais": 6276.783333333334,
+    "custo_reais": 192.20921837787847,
+    "roi_pct": 3165.5995307120684,
+    "payback_dias": 8.632242806464328
+   },
+   {
+    "nome": "Dez assinantes, conferência mais rápida (hipótese)",
+    "minutos_manuais": 5,
+    "minutos_por_dia": 4,
+    "assinantes": 10,
+    "ganho_h": 243.33333333333331,
+    "custo_h": 26.0,
+    "ganho_reais": 1793.3666666666666,
+    "custo_reais": 192.20921837787847,
+    "roi_pct": 833.0284373463052,
+    "payback_dias": 30.758426966292138
+   }
+  ],
+  "base": {
+   "minutos_manuais": 15,
+   "minutos_por_dia": 14,
+   "assinantes": 1,
+   "ganho_h": 85.16666666666667,
+   "custo_h": 26.0,
+   "ganho_reais": 627.6783333333334,
+   "custo_reais": 192.20921837787847,
+   "roi_pct": 226.55995307120685,
+   "payback_dias": 92.21052631578947
+  },
+  "pessimista": {
+   "minutos_manuais": 5,
+   "minutos_por_dia": 4,
+   "assinantes": 1,
+   "ganho_h": 24.333333333333332,
+   "custo_h": 26.0,
+   "ganho_reais": 179.33666666666667,
+   "custo_reais": 192.20921837787847,
+   "roi_pct": -6.6971562653694825,
+   "payback_dias": 398.1818181818182
+  },
+  "dev_mais_caro": {
+   "minutos_manuais": 15,
+   "minutos_por_dia": 14,
+   "assinantes": 1,
+   "ganho_h": 85.16666666666667,
+   "custo_h": 66.0,
+   "ganho_reais": 627.6783333333334,
+   "custo_reais": 487.0092183778785,
+   "roi_pct": 28.884281785053897,
+   "payback_dias": 276.6315789473684
+  }
+ }
+}

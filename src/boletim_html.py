@@ -276,7 +276,8 @@ def gerar(eventos, titulos_observados, primeira_edicao, arquivo_audio=""):
     partes.append(
         "<footer><strong>Seu jornal diário de realidade virtual.</strong> "
         "Preços, jogadores ativos, avaliações e anúncios direto da Steam — "
-        "processado 100% na sua máquina.<br>"
+        "processado 100% na sua máquina. Os resumos das atualizações são "
+        "escritos por IA e a narração usa voz sintética.<br>"
         f"<span class='meta'>{titulos_observados} títulos monitorados · "
         f"{movimentos} nesta edição{ouvir}</span>"
         "</footer></div></body></html>"

@@ -226,6 +226,17 @@ def _secao(titulo, conteudo, cor="#6b7280", fundo=None):
     )
 
 
+# Transparencia: o assinante precisa saber qual parte do boletim vem de IA.
+AVISO_IA = ("Os resumos das atualizações são escritos por IA e a narração usa voz "
+            "sintética. Preços e números vêm direto das lojas.")
+
+
+def _saudacao(perfil):
+    """O nome e opcional no cadastro: serve so para a saudacao."""
+    nome = (perfil.get("nome") or "").strip()
+    return f"Olá, {nome}" if nome else "Olá"
+
+
 def montar_email(perfil, selecao, mensagem, edicao):
     data = datetime.fromisoformat(edicao["publicada_em"]).strftime("%d/%m")
     inscrito = datetime.fromisoformat(perfil["consentimento"]).strftime("%d/%m/%Y")
@@ -234,7 +245,7 @@ def montar_email(perfil, selecao, mensagem, edicao):
         f'max-width:560px;margin:0 auto;padding:20px 16px">',
         f'<div style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:{LARANJA}">'
         f'RADAR VR <span style="color:#9ca3af;font-weight:400;letter-spacing:0">· {data}</span></div>',
-        f'<div style="font-size:22px;font-weight:800;margin:6px 0 2px">Olá, {html.escape(perfil["nome"])}</div>',
+        f'<div style="font-size:22px;font-weight:800;margin:6px 0 2px">{html.escape(_saudacao(perfil))}</div>',
         f'<div style="color:#555;margin:0 0 18px">{html.escape(mensagem["abertura"])}</div>',
     ]
     if selecao["urgentes"]:
@@ -254,14 +265,15 @@ def montar_email(perfil, selecao, mensagem, edicao):
         '<div style="border-top:1px solid #e5e7eb;margin:18px 0 0;padding-top:10px;'
         'color:#9ca3af;font-size:11px">'
         f'Preço histórico: <a href="{itad.URL_FONTE}" style="color:#9ca3af">{itad.FONTE}</a> · '
-        f"dados da Steam · inscrito em {inscrito} · responda SAIR para cancelar</div></div>"
+        f"dados da Steam · inscrito em {inscrito} · responda SAIR para cancelar<br>"
+        f"{AVISO_IA}</div></div>"
     )
     return "".join(partes)
 
 
 def montar_texto(perfil, selecao, mensagem):
     """Versao em texto puro do e-mail, para leitores sem HTML e filtros de spam."""
-    linhas = [f"Olá, {perfil['nome']}", mensagem["abertura"], ""]
+    linhas = [_saudacao(perfil), mensagem["abertura"], ""]
     for titulo, eventos in (("ATENÇÃO HOJE", selecao["urgentes"]),
                             ("NOVIDADES NOS SEUS JOGOS", selecao["itens"])):
         if not eventos:
@@ -273,6 +285,7 @@ def montar_texto(perfil, selecao, mensagem):
             linhas.append(f"  {evento['url']}")
         linhas.append("")
     linhas.append(f"Preço histórico: {itad.FONTE} · responda SAIR para cancelar")
+    linhas.append(AVISO_IA)
     return "\n".join(linhas)
 
 

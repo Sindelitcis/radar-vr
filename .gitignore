@@ -40,3 +40,6 @@ perfis.json
 
 # Material de entrega (PDF, roteiro do video)
 entrega/
+
+# Trava do script de medicao
+data/*.lock

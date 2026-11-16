@@ -378,35 +378,25 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{loja}}/appreviews/{{appid}}?json=1&language=all&purchase_type=all&num_per_page=0",
+              "raw": "{{api}}/IUserReviewsService/GetAppReviews/v1/?input_json={\"appid\":{{appid}},\"languages\":[\"all\"],\"purchase_type\":1,\"num_per_page\":1}",
               "host": [
-                "{{loja}}"
+                "{{api}}"
               ],
               "path": [
-                "appreviews",
-                "{{appid}}"
+                "IUserReviewsService",
+                "GetAppReviews",
+                "v1",
+                ""
               ],
               "query": [
                 {
-                  "key": "json",
-                  "value": "1"
-                },
-                {
-                  "key": "language",
-                  "value": "all"
-                },
-                {
-                  "key": "purchase_type",
-                  "value": "all"
-                },
-                {
-                  "key": "num_per_page",
-                  "value": "0",
-                  "description": "só o resumo"
+                  "key": "input_json",
+                  "value": "{\"appid\":{{appid}},\"languages\":[\"all\"],\"purchase_type\":1,\"num_per_page\":1}",
+                  "description": "num_per_page 1 é o mínimo que a rota aceita; só o resumo é usado"
                 }
               ]
             },
-            "description": "query_summary traz total_positive, total_reviews e review_score_desc."
+            "description": "query_summary traz total_positive, total_reviews e review_score_desc. Substitui a rota /appreviews/<appid> da loja, desligada pela Steam em outubro de 2026. A lista de avaliações que vem junto é descartada."
           }
         },
         {

@@ -58,7 +58,8 @@ STEAM_DETALHES = "https://store.steampowered.com/api/appdetails"
 STEAM_JOGADORES = (
     "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/"
 )
-STEAM_AVALIACOES = "https://store.steampowered.com/appreviews/"
+# A rota antiga da loja (/appreviews/<appid>) foi desligada em outubro de 2026.
+STEAM_AVALIACOES = "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/"
 STEAM_NOTICIAS = "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/"
 
 FILTRO_VR = {"category1": 998, "vrsupport": 401}  # 998 = jogos, 401 = suporte VR

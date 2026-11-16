@@ -91,7 +91,7 @@ Pela linha de comando: `python src/jornal.py` (`--sem-audio`, `--titulos 8`).
 | Arquivo | Conteúdo | No Git? |
 |---|---|---|
 | `.env` | credenciais: Gmail, Telegram, IsThereAnyDeal, WhatsApp | não (modelo em `.env.example`) |
-| `perfis.json` | assinantes: contato, jogos, gêneros, orçamento, data do consentimento | não (modelo em `perfis.exemplo.json`) |
+| `perfis.json` | assinantes: contato, jogos, gêneros, orçamento, data do consentimento; nome é opcional | não (modelo em `perfis.exemplo.json`) |
 
 Perfil sem data de consentimento é ignorado. As demais opções (porta, modo
 ensaio, falha forçada de canal para teste) estão comentadas no `.env.example`.
@@ -113,6 +113,7 @@ ensaio, falha forçada de canal para teste) estão comentadas no `.env.example`.
 | [`auditoria.py`](src/auditoria.py) | registro de cada envio e bloqueio de repetição |
 | [`servico.py`](src/servico.py) | microsserviço HTTP chamado pelo n8n |
 | [`painel.py`](src/painel.py) | painel do boletim geral |
+| [`painel_metricas.py`](src/painel_metricas.py) | painel de desempenho, gerado a partir das medições |
 
 Fluxos do n8n em [`n8n/`](n8n): o boletim personalizado, o tratamento de
 falhas e o boletim geral da Etapa 1.
@@ -131,6 +132,25 @@ fictícios. Principais resultados (detalhes em
 | Personalização de 100 assinantes, LLM → regra | 164 s | 0,03 s |
 | Edição com o Ollama desligado | abortava | 2,1 s |
 
+## Métricas e painel
+
+`python testes/metricas.py campanha 30` roda o fluxo completo pelo n8n e grava
+uma linha por execução em `evidencias/metricas_execucoes.jsonl`: resultado e
+duração do fluxo e de cada nó, tempo de cada etapa da edição e resultado de
+cada envio. `python src/painel_metricas.py` transforma esses registros no
+painel [`evidencias/painel_metricas.html`](evidencias/painel_metricas.html),
+com latência (mediana e p95), taxa de sucesso, taxa de edições completas e
+retorno. Método e achados em [docs/08_metricas.md](docs/08_metricas.md).
+
+A medição mostrou que o fluxo terminava sem erro com a edição incompleta: a
+Steam tinha desligado a rota de avaliações, e o modelo de linguagem não estava
+mais instalado. As duas causas foram corrigidas e viraram teste:
+
+```
+python testes/test_redacao.py
+python testes/test_etapa_final.py
+```
+
 ## Limitações
 
 - **WhatsApp:** integrado pela API oficial da Meta, mas a Meta recusa a entrega
@@ -142,6 +162,9 @@ fictícios. Principais resultados (detalhes em
   o perfil à mão.
 - **Execução local:** roda no computador do operador; a versão pública na web
   é o próximo passo.
+- **Edição incompleta:** quando uma fonte falha, o boletim sai sem aquela
+  parte e o operador ainda não é avisado. O registro de medições mostra o
+  problema; o aviso automático é o próximo passo.
 
 ## Documentação
 
@@ -154,6 +177,8 @@ fictícios. Principais resultados (detalhes em
 | [n8n](docs/05_n8n.md) | fluxos, passagem de dados e desvios de erro |
 | [Microsserviço e canais](docs/06_canais.md) | rotas, personalização e tratamento de erros |
 | [Testes de carga](docs/07_testes.md) | gargalos, melhorias e números |
+| [Métricas](docs/08_metricas.md) | latência, taxa de sucesso, retorno e o que a medição revelou |
+| [Ética e privacidade](docs/09_etica.md) | dados pessoais, LGPD, IA responsável, riscos e rotina de revisão |
 
 ---
 

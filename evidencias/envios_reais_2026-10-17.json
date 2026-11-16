@@ -1,0 +1,61 @@
+{
+ "origem": "logs/auditoria.jsonl, envios reais de 17/10/2026 (Etapa 2); falhas simuladas por RADAR_FALHAR_CANAIS ficam de fora",
+ "canais": {
+  "email": {
+   "enviados": 24,
+   "falhas": 0,
+   "tentativas_max": 1,
+   "latencias_ms": [
+    13055,
+    14261,
+    9154,
+    8536,
+    23974,
+    24816,
+    21392,
+    22805,
+    23109,
+    23919,
+    22524,
+    23362,
+    21389,
+    22223,
+    22430,
+    24881,
+    21449,
+    23053,
+    15564,
+    16580,
+    15558,
+    16872,
+    22260,
+    23713
+   ]
+  },
+  "telegram": {
+   "enviados": 18,
+   "falhas": 0,
+   "tentativas_max": 1,
+   "latencias_ms": [
+    1023,
+    991,
+    1108,
+    1108,
+    1128,
+    1095,
+    1099,
+    1106,
+    1104,
+    1113,
+    1077,
+    1060,
+    1090,
+    1121,
+    1099,
+    1097,
+    1068,
+    1075
+   ]
+  }
+ }
+}

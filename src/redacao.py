@@ -131,24 +131,25 @@ def redigir(eventos):
         log.warning("Ollama indisponível: chamadas pela regra. Execute 'ollama serve'.")
 
     for evento in eventos:
-        if evento["tipo"] not in TIPOS_REDIGIDOS or not llm_ativo:
-            evento["linha"] = f"{evento['nome']} {evento['resumo']}"
-            origem = "regra"
-        else:
+        linha = ""
+        if evento["tipo"] in TIPOS_REDIGIDOS and llm_ativo:
             try:
-                evento["linha"] = _redigir_um(evento) or (
-                    f"{evento['nome']} {evento['resumo']}"
-                )
-                origem = "llm"
+                linha = _redigir_um(evento)
             except Exception as erro:
                 log.error("Redação falhou em %s: %s", evento["nome"], erro)
-                evento["linha"] = f"{evento['nome']} {evento['resumo']}"
-                origem = "regra"
-        log.info("  %-18s [%s] %s", evento["tipo"][:18], origem, evento["linha"][:52])
+        # A origem fica no evento: a edicao sai mesmo sem o modelo, e so esse
+        # campo mostra depois que o resumo do anuncio nao foi feito.
+        evento["origem_linha"] = "llm" if linha else "regra"
+        evento["linha"] = linha or f"{evento['nome']} {evento['resumo']}"
+        log.info("  %-18s [%s] %s", evento["tipo"][:18], evento["origem_linha"],
+                 evento["linha"][:52])
 
-    pelo_llm = len(precisam_llm) if llm_ativo else 0
+    pelo_llm = sum(e["origem_linha"] == "llm" for e in eventos)
+    sem_resumo = len(precisam_llm) - pelo_llm
     log.info(
         "Etapa 3 concluída: %d linhas (%d do LLM, %d por regra)",
         len(eventos), pelo_llm, len(eventos) - pelo_llm,
     )
+    if sem_resumo:
+        log.warning("%d anúncio(s) saíram sem o resumo do modelo", sem_resumo)
     return eventos

@@ -250,9 +250,12 @@ def _eventos_de_noticias(jogo, ja_publicados):
 
 
 def _eventos_de_avaliacoes(jogo, antes):
-    if not antes:
+    # Total zerado quer dizer leitura que falhou, nao jogo sem avaliacao. Sem
+    # os dois totais nao ha o que comparar: a volta de uma leitura que tinha
+    # falhado viraria uma "onda" com todas as avaliacoes do jogo.
+    if not antes or not antes.get("total_reviews") or not jogo.get("total_reviews"):
         return []
-    novas = (jogo.get("total_reviews") or 0) - (antes.get("total_reviews") or 0)
+    novas = jogo["total_reviews"] - antes["total_reviews"]
     if novas < config.ONDA_REVIEWS_MINIMA:
         return []
     return [_evento(

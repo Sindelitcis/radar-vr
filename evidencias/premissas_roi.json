@@ -1,0 +1,21 @@
+{
+  "minutos_manuais_por_dia": 15,
+  "origem_minutos_manuais": "estimativa: cerca de 1 minuto por jogo para abrir a página da loja, ver preço, desconto, prazo, jogadores e anúncios, em 15 jogos",
+  "minutos_manuais_pessimista": 5,
+  "minutos_leitura_boletim": 1,
+  "origem_leitura_boletim": "premissa: ler o e-mail ou ouvir o áudio de cerca de 1 minuto; descontado do tempo poupado",
+  "horas_desenvolvimento": 20,
+  "origem_horas_desenvolvimento": "estimativa do autor para as Etapas 1 e 2",
+  "minutos_manutencao_por_mes": 30,
+  "origem_manutencao": "premissa: conferir logs e avisos de falha, atualizar dependências",
+  "valor_hora_reais": 7.37,
+  "origem_valor_hora": "salário mínimo de 2026 (R$ 1.621,00, Decreto 12.797/2025) dividido por 220 horas",
+  "fator_hora_desenvolvimento_pessimista": 3,
+  "tarifa_reais_por_kwh": 1.1,
+  "origem_tarifa": "tarifa residencial média projetada pela ANEEL para 2026 (R$ 851/MWh) mais ICMS e PIS/Cofins médios (18,0% e 4,9%, por dentro)",
+  "watts_resto_do_computador": 100,
+  "origem_watts": "premissa para processador, memória e fonte; o consumo da placa de vídeo é medido",
+  "etapa1_total_s": 110,
+  "etapa2_total_s": 36.4,
+  "origem_etapas": "docs/07_testes.md, medições de 17/10/2026"
+}
