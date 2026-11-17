@@ -40,8 +40,8 @@ mesma leitura anterior e não altera o histórico do boletim.
 | Ensaio | coleta, modelo e narração rodam de verdade; nenhuma mensagem sai da máquina |
 | Real | envia aos assinantes de `perfis.json`, sem gravar no histórico (`RADAR_HISTORICO_FIXO=1`) |
 
-Junto de cada execução ficam o estado do Ollama (no ar, modelo instalado,
-modelo já na memória), a carga do processador e o uso e o consumo da placa de
+Junto de cada execução ficam o estado do Ollama (no ar, modelo já na
+memória), a carga do processador e o uso e o consumo da placa de
 vídeo, lidos a cada 2 segundos. Isso permite separar uma execução lenta por
 causa da rede de uma execução lenta por causa da máquina.
 
@@ -108,7 +108,7 @@ acima de 20 s, o padrão da espera por IPv6 já visto no Telegram (`docs/07`).
 A causa ainda não foi isolada. O n8n dispara os
 e-mails de uma edição ao mesmo tempo, o que funcionou com dois destinatários.
 A personalização resolve 100 assinantes em 0,03 s; o envio dos mesmos 100
-significaria cerca de 284 MB de áudio por edição, com limite de 60 s por
+significaria cerca de 261 MB de áudio por edição, com limite de 60 s por
 envio no nó. Esse volume não foi testado.
 
 ## 5. Melhorias propostas
