@@ -1,7 +1,7 @@
 """Testes da redacao: a origem de cada frase precisa refletir o que aconteceu.
 
-Caso que motivou o teste: com o modelo ausente do Ollama, as chamadas
-falhavam, as frases saiam pela regra e o log ainda contava "3 do LLM".
+Confere que cada frase registra se veio do modelo ou da regra, inclusive
+quando a chamada ao Ollama falha.
 
     python testes/test_redacao.py
 """

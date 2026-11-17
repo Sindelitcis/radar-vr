@@ -143,11 +143,10 @@ com latência (mediana e p95), taxa de sucesso, taxa de edições completas e
 retorno. Método e achados em [docs/08_metricas.md](docs/08_metricas.md).
 
 A medição mostrou que o fluxo terminava sem erro com a edição incompleta: a
-Steam tinha desligado a rota de avaliações, e o modelo de linguagem não estava
-mais instalado. As duas causas foram corrigidas e viraram teste:
+Steam tinha desligado a rota de avaliações. A falha foi corrigida e virou
+teste:
 
 ```
-python testes/test_redacao.py
 python testes/test_etapa_final.py
 ```
 

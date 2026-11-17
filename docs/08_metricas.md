@@ -64,12 +64,11 @@ painel de novo refaz a conta.
 
 **Fluxo sem erro não é edição completa.** O tratamento de erros da Etapa 2 faz
 o boletim sair mesmo quando uma fonte falha. Faltava avisar que saiu faltando
-algo. Duas falhas ficaram escondidas, com a taxa de sucesso em 100%:
+algo. Uma falha ficou escondida, com a taxa de sucesso em 100%:
 
 | Falha | O que acontecia | Correção |
 |---|---|---|
 | A Steam desligou a rota `store.steampowered.com/appreviews/<appid>`, que passou a redirecionar para a página inicial da loja | a coleta registrava um aviso por jogo e a edição seguia sem aprovação e sem total de avaliações | `coleta.buscar_avaliacoes` usa `IUserReviewsService/GetAppReviews`, a rota indicada na documentação da Steam |
-| O modelo `llama3.1:8b` não estava mais instalado no Ollama | o Ollama respondia, cada pedido de resumo falhava, as frases saíam pela regra e o log contava as frases como vindas do modelo | cada evento registra `origem_linha` (`llm` ou `regra`); a contagem usa esse campo e o log avisa quantos anúncios ficaram sem resumo |
 
 A leitura que falhava gravava total de avaliações igual a zero. Sem proteção,
 a primeira leitura depois da correção viraria uma "onda de avaliações" com
@@ -85,7 +84,6 @@ primeira melhoria proposta abaixo.
 Cada caso tem teste automatizado, sem acesso à rede:
 
 ```
-python testes/test_redacao.py
 python testes/test_etapa_final.py
 ```
 
@@ -97,8 +95,8 @@ O teste confere que nada do autor segue adiante.
 **Manter o modelo na memória ajuda pouco na mediana, mas a carga lenta faz o
 p95.** A redação leva cerca de 1,5 s com o modelo carregado e cerca de 3,8 s
 com ele frio. Em 7 execuções em ensaio, porém, a carga demorou e a redação
-levou de 12 s a 67 s (a mais longa foi a primeira depois de instalar o
-modelo). As 5 execuções acima do p95 são todas desse tipo. As 3 execuções com
+levou de 12 s a 67 s (a mais longa passou de um
+minuto). As 5 execuções acima do p95 são todas desse tipo. As 3 execuções com
 coleta acima de 25 s, por lentidão da Steam, ficaram abaixo do p95. A saída
 barata é carregar o modelo no início da edição, em paralelo com a coleta, em
 vez de mantê-lo na placa de vídeo o dia inteiro.

@@ -483,7 +483,7 @@ def montar(execucoes, r, p):
         f"Cada e-mail leva {duracao(email['p50_s'])}; a causa ainda não foi isolada (o anexo é suspeito, mas em 17/10 e-mails com áudio saíram em 9 s). "
         f"O alerta no Telegram leva {duracao(telegram['p50_s'])}. O envio só foi medido com dois destinatários.",
         "O fluxo terminou sem erro mesmo quando faltava uma parte: a rota de avaliações desligada pela Steam "
-        "e o modelo ausente não derrubaram a edição, mas ela saiu incompleta sem avisar ninguém.",
+        "não derrubou a edição, mas ela saiu incompleta sem avisar ninguém.",
     ]
     proximos = [
         "Avisar o operador quando a edição sair incompleta, e acompanhar a taxa de edições completas, não só a de fluxos sem erro.",
